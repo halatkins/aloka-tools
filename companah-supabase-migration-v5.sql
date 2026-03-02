@@ -198,7 +198,7 @@ CREATE TABLE IF NOT EXISTS orders.orders (
   -- Order status & service
   status                    text CHECK (status IN (
                               'pre_planning', 'on_hold', 'awaiting_pickup', 'received',
-                              'triage', 'cremation_550', 'cremation_400', 'cremation_donatello',
+                              'triage', 'cremation',
                               'preparing_remains', 'building_memorials', 'ready_to_return',
                               'customer_pickup', 'closed', 'delinquent'
                             )),
@@ -786,9 +786,8 @@ DO $$ BEGIN
   ALTER TABLE orders.orders ADD CONSTRAINT orders_status_check
     CHECK (status IN (
       'pre_planning', 'on_hold', 'awaiting_pickup', 'received',
-      'triage', 'cremation_550', 'cremation_400', 'cremation_donatello',
-      'preparing_remains', 'building_memorials', 'ready_to_return',
-      'customer_pickup', 'closed', 'delinquent'
+      'triage', 'cremation', 'preparing_remains', 'building_memorials',
+      'ready_to_return', 'customer_pickup', 'closed', 'delinquent'
     ));
 EXCEPTION WHEN others THEN NULL;
 END $$;
