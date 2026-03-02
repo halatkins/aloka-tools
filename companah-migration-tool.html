@@ -688,11 +688,13 @@ async function migrateClients(records) {
 
   for (const rec of records) {
     const f = rec.fields;
-    const contactId = ensureUUID(idMap.contacts, rec.id);
 
     const first = f['First'] || '';
     const last = f['Last'] || '';
     if (!first && !last) continue;
+
+    // Only assign UUID for records we'll actually insert
+    const contactId = ensureUUID(idMap.contacts, rec.id);
 
     contacts.push({
       id: contactId,
@@ -720,11 +722,13 @@ async function migrateAppUsers(records) {
 
   for (const rec of records) {
     const f = rec.fields;
-    const contactId = ensureUUID(idMap.contacts, rec.id);
 
     const first = f['First Name'] || '';
     const last = f['Last Name'] || '';
     if (!first && !last) continue;
+
+    // Only assign UUID for records we'll actually insert
+    const contactId = ensureUUID(idMap.contacts, rec.id);
 
     // Link to vet org if applicable
     let orgId = null;
