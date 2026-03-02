@@ -268,14 +268,22 @@ const STATUS_MAP = {
   'Awaiting Pickup': 'awaiting_pickup',
   'Received': 'received',
   'Triage': 'triage',
+  'Cremation': 'cremation',
   'Cremation - 550': 'cremation',
   'Cremation - 400': 'cremation',
   'Cremation - Donatello': 'cremation',
+  'Communals': 'cremation',
   'Preparing Remains': 'complete',
   'Building Memorials': 'complete',
-  'Closed': 'delivered',
+  'Ready to Return': 'complete',
+  'Customer Pickup': 'complete',
   'Complete': 'complete',
+  'Closed': 'delivered',
+  'Closed - Test': 'delivered',
   'Delivered': 'delivered',
+  'Deliquent': 'delivered',
+  'Animal Kingdom V': 'received',
+  'Graceful Goodbyes': 'received',
 };
 
 const SERVICE_MAP = {
@@ -808,9 +816,9 @@ async function migratePets(records) {
     // ── ORDER ──
     const isVet = f['Vet?'] || false;
     const careType = (isVet && partnerOrgId) ? 'partner' : 'direct';
-    const statusRaw = f['Status'] || '';
+    const statusRaw = (f['Status'] || '').trim();
     const status = STATUS_MAP[statusRaw] || null;
-    const serviceRaw = f['Service Type'] || '';
+    const serviceRaw = (f['Service Type'] || '').trim();
     const serviceType = SERVICE_MAP[serviceRaw] || null;
 
     orders.push({
