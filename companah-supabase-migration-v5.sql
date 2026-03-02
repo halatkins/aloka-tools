@@ -104,6 +104,7 @@ CREATE TABLE IF NOT EXISTS core.organizations (
   updated_at    timestamptz NOT NULL DEFAULT now()
 );
 
+DROP TRIGGER IF EXISTS organizations_updated_at ON core.organizations;
 CREATE TRIGGER organizations_updated_at
   BEFORE UPDATE ON core.organizations
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
@@ -130,11 +131,12 @@ CREATE TABLE IF NOT EXISTS core.contacts (
   updated_at      timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_contacts_organization ON core.contacts(organization_id);
-CREATE INDEX idx_contacts_email ON core.contacts(email);
-CREATE INDEX idx_contacts_role ON core.contacts(role);
-CREATE INDEX idx_contacts_auth_user ON core.contacts(auth_user_id);
+CREATE INDEX IF NOT EXISTS idx_contacts_organization ON core.contacts(organization_id);
+CREATE INDEX IF NOT EXISTS idx_contacts_email ON core.contacts(email);
+CREATE INDEX IF NOT EXISTS idx_contacts_role ON core.contacts(role);
+CREATE INDEX IF NOT EXISTS idx_contacts_auth_user ON core.contacts(auth_user_id);
 
+DROP TRIGGER IF EXISTS contacts_updated_at ON core.contacts;
 CREATE TRIGGER contacts_updated_at
   BEFORE UPDATE ON core.contacts
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
@@ -160,9 +162,10 @@ CREATE TABLE IF NOT EXISTS core.pets (
   updated_at          timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_pets_owner ON core.pets(owner_id);
-CREATE INDEX idx_pets_pocket ON core.pets(is_pocket_pet);
+CREATE INDEX IF NOT EXISTS idx_pets_owner ON core.pets(owner_id);
+CREATE INDEX IF NOT EXISTS idx_pets_pocket ON core.pets(is_pocket_pet);
 
+DROP TRIGGER IF EXISTS pets_updated_at ON core.pets;
 CREATE TRIGGER pets_updated_at
   BEFORE UPDATE ON core.pets
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
@@ -233,14 +236,15 @@ CREATE TABLE IF NOT EXISTS orders.orders (
   updated_at                timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_orders_pet ON orders.orders(pet_id);
-CREATE INDEX idx_orders_owner ON orders.orders(owner_contact_id);
-CREATE INDEX idx_orders_partner_org ON orders.orders(partner_organization_id);
-CREATE INDEX idx_orders_status ON orders.orders(status);
-CREATE INDEX idx_orders_care_type ON orders.orders(care_type);
-CREATE INDEX idx_orders_companah_id ON orders.orders(companah_id);
-CREATE INDEX idx_orders_date_received ON orders.orders(date_received);
+CREATE INDEX IF NOT EXISTS idx_orders_pet ON orders.orders(pet_id);
+CREATE INDEX IF NOT EXISTS idx_orders_owner ON orders.orders(owner_contact_id);
+CREATE INDEX IF NOT EXISTS idx_orders_partner_org ON orders.orders(partner_organization_id);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders.orders(status);
+CREATE INDEX IF NOT EXISTS idx_orders_care_type ON orders.orders(care_type);
+CREATE INDEX IF NOT EXISTS idx_orders_companah_id ON orders.orders(companah_id);
+CREATE INDEX IF NOT EXISTS idx_orders_date_received ON orders.orders(date_received);
 
+DROP TRIGGER IF EXISTS orders_updated_at ON orders.orders;
 CREATE TRIGGER orders_updated_at
   BEFORE UPDATE ON orders.orders
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
@@ -264,8 +268,8 @@ CREATE TABLE IF NOT EXISTS orders.line_items (
   created_at      timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_line_items_order ON orders.line_items(order_id);
-CREATE INDEX idx_line_items_billed ON orders.line_items(billed_to_type);
+CREATE INDEX IF NOT EXISTS idx_line_items_order ON orders.line_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_line_items_billed ON orders.line_items(billed_to_type);
 
 COMMENT ON TABLE orders.line_items IS 'Products/services on an order. billed_to splits charges for shared care';
 
@@ -301,9 +305,10 @@ CREATE TABLE IF NOT EXISTS orders.care_plans (
   updated_at                timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_care_plans_order ON orders.care_plans(order_id);
-CREATE INDEX idx_care_plans_care_type ON orders.care_plans(care_type);
+CREATE INDEX IF NOT EXISTS idx_care_plans_order ON orders.care_plans(order_id);
+CREATE INDEX IF NOT EXISTS idx_care_plans_care_type ON orders.care_plans(care_type);
 
+DROP TRIGGER IF EXISTS care_plans_updated_at ON orders.care_plans;
 CREATE TRIGGER care_plans_updated_at
   BEFORE UPDATE ON orders.care_plans
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
@@ -322,9 +327,10 @@ CREATE TABLE IF NOT EXISTS orders.memorials (
   updated_at  timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_memorials_order ON orders.memorials(order_id);
-CREATE INDEX idx_memorials_pet ON orders.memorials(pet_id);
+CREATE INDEX IF NOT EXISTS idx_memorials_order ON orders.memorials(order_id);
+CREATE INDEX IF NOT EXISTS idx_memorials_pet ON orders.memorials(pet_id);
 
+DROP TRIGGER IF EXISTS memorials_updated_at ON orders.memorials;
 CREATE TRIGGER memorials_updated_at
   BEFORE UPDATE ON orders.memorials
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
@@ -364,9 +370,10 @@ CREATE TABLE IF NOT EXISTS operations.runs (
   updated_at          timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_runs_machine ON operations.runs(machine_id);
-CREATE INDEX idx_runs_date ON operations.runs(run_date);
+CREATE INDEX IF NOT EXISTS idx_runs_machine ON operations.runs(machine_id);
+CREATE INDEX IF NOT EXISTS idx_runs_date ON operations.runs(run_date);
 
+DROP TRIGGER IF EXISTS runs_updated_at ON operations.runs;
 CREATE TRIGGER runs_updated_at
   BEFORE UPDATE ON operations.runs
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
@@ -382,8 +389,8 @@ CREATE TABLE IF NOT EXISTS operations.run_pets (
   created_at      timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_run_pets_run ON operations.run_pets(run_id);
-CREATE INDEX idx_run_pets_order ON operations.run_pets(order_id);
+CREATE INDEX IF NOT EXISTS idx_run_pets_run ON operations.run_pets(run_id);
+CREATE INDEX IF NOT EXISTS idx_run_pets_order ON operations.run_pets(order_id);
 
 COMMENT ON TABLE operations.run_pets IS 'Junction: which orders (pets) were in which run';
 
@@ -423,13 +430,14 @@ CREATE TABLE IF NOT EXISTS billing.invoices (
   updated_at              timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_invoices_order ON billing.invoices(order_id);
-CREATE INDEX idx_invoices_billed_contact ON billing.invoices(billed_to_contact_id);
-CREATE INDEX idx_invoices_billed_org ON billing.invoices(billed_to_org_id);
-CREATE INDEX idx_invoices_billed_type ON billing.invoices(billed_to_type);
-CREATE INDEX idx_invoices_status ON billing.invoices(status);
-CREATE INDEX idx_invoices_qbo_id ON billing.invoices(qbo_invoice_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_order ON billing.invoices(order_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_billed_contact ON billing.invoices(billed_to_contact_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_billed_org ON billing.invoices(billed_to_org_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_billed_type ON billing.invoices(billed_to_type);
+CREATE INDEX IF NOT EXISTS idx_invoices_status ON billing.invoices(status);
+CREATE INDEX IF NOT EXISTS idx_invoices_qbo_id ON billing.invoices(qbo_invoice_id);
 
+DROP TRIGGER IF EXISTS invoices_updated_at ON billing.invoices;
 CREATE TRIGGER invoices_updated_at
   BEFORE UPDATE ON billing.invoices
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
@@ -452,7 +460,7 @@ CREATE TABLE IF NOT EXISTS billing.invoice_line_items (
   created_at        timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_invoice_lines_invoice ON billing.invoice_line_items(invoice_id);
+CREATE INDEX IF NOT EXISTS idx_invoice_lines_invoice ON billing.invoice_line_items(invoice_id);
 
 COMMENT ON TABLE billing.invoice_line_items IS 'Line items on an invoice — description, qty, rate, tax';
 
@@ -489,10 +497,11 @@ CREATE TABLE IF NOT EXISTS workflows.tasks (
   updated_at    timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_tasks_order ON workflows.tasks(order_id);
-CREATE INDEX idx_tasks_assigned ON workflows.tasks(assigned_to);
-CREATE INDEX idx_tasks_status ON workflows.tasks(status);
+CREATE INDEX IF NOT EXISTS idx_tasks_order ON workflows.tasks(order_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_assigned ON workflows.tasks(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_tasks_status ON workflows.tasks(status);
 
+DROP TRIGGER IF EXISTS tasks_updated_at ON workflows.tasks;
 CREATE TRIGGER tasks_updated_at
   BEFORE UPDATE ON workflows.tasks
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
@@ -508,7 +517,7 @@ CREATE TABLE IF NOT EXISTS workflows.comments (
   created_at  timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_comments_task ON workflows.comments(task_id);
+CREATE INDEX IF NOT EXISTS idx_comments_task ON workflows.comments(task_id);
 
 COMMENT ON TABLE workflows.comments IS 'Discussion on tasks';
 
@@ -537,9 +546,10 @@ CREATE TABLE IF NOT EXISTS partners.profiles (
   updated_at                  timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_partner_profiles_org ON partners.profiles(organization_id);
-CREATE INDEX idx_partner_profiles_code ON partners.profiles(partner_code);
+CREATE INDEX IF NOT EXISTS idx_partner_profiles_org ON partners.profiles(organization_id);
+CREATE INDEX IF NOT EXISTS idx_partner_profiles_code ON partners.profiles(partner_code);
 
+DROP TRIGGER IF EXISTS partner_profiles_updated_at ON partners.profiles;
 CREATE TRIGGER partner_profiles_updated_at
   BEFORE UPDATE ON partners.profiles
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
@@ -557,8 +567,8 @@ CREATE TABLE IF NOT EXISTS partners.referrals (
   created_at            timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_referrals_partner ON partners.referrals(partner_profile_id);
-CREATE INDEX idx_referrals_order ON partners.referrals(order_id);
+CREATE INDEX IF NOT EXISTS idx_referrals_partner ON partners.referrals(partner_profile_id);
+CREATE INDEX IF NOT EXISTS idx_referrals_order ON partners.referrals(order_id);
 
 COMMENT ON TABLE partners.referrals IS 'Which orders came through which partner';
 
@@ -579,8 +589,8 @@ CREATE TABLE IF NOT EXISTS clients.portal_access (
   created_at       timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_portal_contact ON clients.portal_access(contact_id);
-CREATE INDEX idx_portal_order ON clients.portal_access(order_id);
+CREATE INDEX IF NOT EXISTS idx_portal_contact ON clients.portal_access(contact_id);
+CREATE INDEX IF NOT EXISTS idx_portal_order ON clients.portal_access(order_id);
 
 COMMENT ON TABLE clients.portal_access IS 'Token-based or temp-password access for order status';
 
@@ -599,9 +609,10 @@ CREATE TABLE IF NOT EXISTS clients.reviews (
   updated_at            timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_reviews_contact ON clients.reviews(contact_id);
-CREATE INDEX idx_reviews_order ON clients.reviews(order_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_contact ON clients.reviews(contact_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_order ON clients.reviews(order_id);
 
+DROP TRIGGER IF EXISTS reviews_updated_at ON clients.reviews;
 CREATE TRIGGER reviews_updated_at
   BEFORE UPDATE ON clients.reviews
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
@@ -634,10 +645,11 @@ CREATE TABLE IF NOT EXISTS logistics.locations (
   updated_at      timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_locations_org ON logistics.locations(organization_id);
-CREATE INDEX idx_locations_type ON logistics.locations(location_type);
-CREATE INDEX idx_locations_active ON logistics.locations(is_active);
+CREATE INDEX IF NOT EXISTS idx_locations_org ON logistics.locations(organization_id);
+CREATE INDEX IF NOT EXISTS idx_locations_type ON logistics.locations(location_type);
+CREATE INDEX IF NOT EXISTS idx_locations_active ON logistics.locations(is_active);
 
+DROP TRIGGER IF EXISTS locations_updated_at ON logistics.locations;
 CREATE TRIGGER locations_updated_at
   BEFORE UPDATE ON logistics.locations
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
@@ -660,10 +672,11 @@ CREATE TABLE IF NOT EXISTS logistics.routes (
   updated_at    timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_routes_driver ON logistics.routes(driver_id);
-CREATE INDEX idx_routes_date ON logistics.routes(route_date);
-CREATE INDEX idx_routes_status ON logistics.routes(status);
+CREATE INDEX IF NOT EXISTS idx_routes_driver ON logistics.routes(driver_id);
+CREATE INDEX IF NOT EXISTS idx_routes_date ON logistics.routes(route_date);
+CREATE INDEX IF NOT EXISTS idx_routes_status ON logistics.routes(status);
 
+DROP TRIGGER IF EXISTS routes_updated_at ON logistics.routes;
 CREATE TRIGGER routes_updated_at
   BEFORE UPDATE ON logistics.routes
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
@@ -686,9 +699,10 @@ CREATE TABLE IF NOT EXISTS logistics.stops (
   updated_at        timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_stops_route ON logistics.stops(route_id);
-CREATE INDEX idx_stops_location ON logistics.stops(location_id);
+CREATE INDEX IF NOT EXISTS idx_stops_route ON logistics.stops(route_id);
+CREATE INDEX IF NOT EXISTS idx_stops_location ON logistics.stops(location_id);
 
+DROP TRIGGER IF EXISTS stops_updated_at ON logistics.stops;
 CREATE TRIGGER stops_updated_at
   BEFORE UPDATE ON logistics.stops
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
@@ -707,8 +721,8 @@ CREATE TABLE IF NOT EXISTS logistics.stop_items (
   created_at        timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_stop_items_stop ON logistics.stop_items(stop_id);
-CREATE INDEX idx_stop_items_order ON logistics.stop_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_stop_items_stop ON logistics.stop_items(stop_id);
+CREATE INDEX IF NOT EXISTS idx_stop_items_order ON logistics.stop_items(order_id);
 
 COMMENT ON TABLE logistics.stop_items IS 'What happened at each stop — which pets picked up or delivered';
 
