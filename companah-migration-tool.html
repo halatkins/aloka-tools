@@ -263,27 +263,22 @@ const MIGRATION_PHASES = [
 
 // ── STATUS + VALUE MAPPINGS ──
 const STATUS_MAP = {
-  'Pre-planning / Inquiry': 'preplanning',
-  'On Hold': 'on_hold',
-  'Awaiting Pickup': 'awaiting_pickup',
-  'Received': 'received',
-  'Triage': 'triage',
-  'Cremation': 'cremation',
-  'Cremation - 550': 'cremation',
-  'Cremation - 400': 'cremation',
-  'Cremation - Donatello': 'cremation',
-  'Communals': 'cremation',
-  'Preparing Remains': 'complete',
-  'Building Memorials': 'complete',
-  'Ready to Return': 'complete',
-  'Customer Pickup': 'complete',
-  'Complete': 'complete',
-  'Closed': 'delivered',
-  'Closed - Test': 'delivered',
-  'Delivered': 'delivered',
-  'Deliquent': 'delivered',
-  'Animal Kingdom V': 'received',
-  'Graceful Goodbyes': 'received',
+  'Pre-Planning':           'pre_planning',
+  'Pre-planning / Inquiry': 'pre_planning',
+  'On Hold':                'on_hold',
+  'Awaiting Pickup':        'awaiting_pickup',
+  'Received':               'received',
+  'Triage':                 'triage',
+  'Cremation - 550':        'cremation_550',
+  'Cremation - 400':        'cremation_400',
+  'Cremation - Donatello':  'cremation_donatello',
+  'Preparing Remains':      'preparing_remains',
+  'Building Memorials':     'building_memorials',
+  'Ready to Return':        'ready_to_return',
+  'Customer Pickup':        'customer_pickup',
+  'Closed':                 'closed',
+  'Deliquent':              'delinquent',
+  // Everything else → null (unmapped statuses are mistakes/spam)
 };
 
 const SERVICE_MAP = {

@@ -197,8 +197,10 @@ CREATE TABLE IF NOT EXISTS orders.orders (
 
   -- Order status & service
   status                    text CHECK (status IN (
-                              'preplanning', 'on_hold', 'awaiting_pickup', 'received',
-                              'triage', 'cremation', 'complete', 'delivered'
+                              'pre_planning', 'on_hold', 'awaiting_pickup', 'received',
+                              'triage', 'cremation_550', 'cremation_400', 'cremation_donatello',
+                              'preparing_remains', 'building_memorials', 'ready_to_return',
+                              'customer_pickup', 'closed', 'delinquent'
                             )),
   service_type              text CHECK (service_type IN (
                               'private', 'communal', 'semi_private', 'biodegradable', 'memorials_only'
@@ -775,6 +777,19 @@ DO $$ BEGIN
   ALTER TABLE core.pets DROP CONSTRAINT IF EXISTS pets_species_check;
   ALTER TABLE core.pets ADD CONSTRAINT pets_species_check
     CHECK (species IN ('dog','cat','bird','reptile','rabbit','hamster','guinea_pig','other'));
+EXCEPTION WHEN others THEN NULL;
+END $$;
+
+-- Expand status CHECK on orders.orders (drop old, add new — safe if already updated)
+DO $$ BEGIN
+  ALTER TABLE orders.orders DROP CONSTRAINT IF EXISTS orders_status_check;
+  ALTER TABLE orders.orders ADD CONSTRAINT orders_status_check
+    CHECK (status IN (
+      'pre_planning', 'on_hold', 'awaiting_pickup', 'received',
+      'triage', 'cremation_550', 'cremation_400', 'cremation_donatello',
+      'preparing_remains', 'building_memorials', 'ready_to_return',
+      'customer_pickup', 'closed', 'delinquent'
+    ));
 EXCEPTION WHEN others THEN NULL;
 END $$;
 
