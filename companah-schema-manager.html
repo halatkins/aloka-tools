@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Companah — Schema Manager</title>
+<style>
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --surface2: #252836;
+    --border: #2e3144; --text: #e4e6f0; --text2: #8b8fa3;
+    --accent: #6c5ce7; --accent2: #a29bfe; --green: #00b894;
+    --orange: #fdcb6e; --red: #e17055; --blue: #74b9ff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+  .topbar h1 { font-size: 20px; }
+  .topbar h1 span { color: var(--accent2); font-weight: 400; }
+  .topbar a { color: var(--text2); text-decoration: none; font-size: 13px; }
+  .topbar a:hover { color: var(--accent2); }
+
+  .layout { display: grid; grid-template-columns: 260px 1fr; min-height: calc(100vh - 57px); }
+
+  /* Sidebar */
+  .sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 16px; overflow-y: auto; }
+  .sidebar h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); margin: 16px 0 8px; }
+  .sidebar h3:first-child { margin-top: 0; }
+  .schema-group { margin-bottom: 4px; }
+  .schema-label { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text2); }
+  .schema-label:hover { background: var(--surface2); }
+  .schema-label .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .table-list { margin-left: 24px; }
+  .table-item { padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--text2); }
+  .table-item:hover { background: var(--surface2); color: var(--text); }
+  .table-item.active { background: var(--accent); color: white; }
+
+  /* Content */
+  .content { padding: 32px; overflow-y: auto; }
+
+  /* Welcome */
+  .welcome { text-align: center; padding: 60px 20px; }
+  .welcome h2 { font-size: 24px; margin-bottom: 12px; }
+  .welcome p { color: var(--text2); max-width: 500px; margin: 0 auto 32px; }
+
+  /* Table Detail */
+  .table-header { margin-bottom: 24px; }
+  .table-header h2 { font-size: 22px; }
+  .table-header .path { color: var(--text2); font-size: 14px; margin-top: 4px; }
+  .table-header .comment { color: var(--text2); font-size: 13px; margin-top: 8px; font-style: italic; }
+
+  .columns-table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+  .columns-table th { text-align: left; padding: 12px 16px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text2); background: var(--surface2); border-bottom: 1px solid var(--border); }
+  .columns-table td { padding: 10px 16px; font-size: 14px; border-bottom: 1px solid var(--border); }
+  .columns-table tr:last-child td { border-bottom: none; }
+  .columns-table tr:hover td { background: rgba(108,92,231,0.05); }
+  .col-name { font-weight: 600; }
+  .col-type { color: var(--blue); font-family: monospace; font-size: 13px; }
+  .col-nullable { color: var(--text2); font-size: 12px; }
+  .badge-pk { background: var(--accent); color: white; font-size: 10px; padding: 2px 6px; border-radius: 3px; margin-left: 6px; }
+  .badge-fk { background: var(--orange); color: #333; font-size: 10px; padding: 2px 6px; border-radius: 3px; margin-left: 6px; }
+  .badge-idx { background: var(--surface2); color: var(--text2); font-size: 10px; padding: 2px 6px; border-radius: 3px; margin-left: 6px; }
+
+  /* SQL Runner */
+  .sql-section { margin-top: 32px; }
+  .sql-section h3 { font-size: 16px; margin-bottom: 12px; }
+  .sql-editor { width: 100%; min-height: 200px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; color: var(--green); font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; resize: vertical; }
+  .sql-editor:focus { outline: none; border-color: var(--accent); }
+  .sql-buttons { display: flex; gap: 8px; margin-top: 12px; }
+  .sql-buttons button { padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; font-weight: 500; }
+  .btn-run { background: var(--green); color: white; }
+  .btn-run:hover { opacity: 0.9; }
+  .btn-load { background: var(--surface2); color: var(--text); border: 1px solid var(--border) !important; }
+  .btn-load:hover { border-color: var(--accent) !important; }
+  .sql-result { margin-top: 16px; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; font-family: monospace; font-size: 13px; white-space: pre-wrap; max-height: 400px; overflow-y: auto; display: none; }
+  .sql-result.success { border-color: var(--green); }
+  .sql-result.error { border-color: var(--red); color: var(--red); }
+
+  /* Connection bar */
+  .conn-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 8px 32px; display: flex; align-items: center; gap: 12px; font-size: 13px; }
+  .conn-bar input { flex: 1; max-width: 300px; padding: 6px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 12px; }
+  .conn-bar button { padding: 6px 14px; background: var(--accent); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+  .conn-status { color: var(--text2); }
+  .conn-status.connected { color: var(--green); }
+
+  /* Relationships */
+  .rels-section { margin-top: 24px; }
+  .rel-item { padding: 8px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 6px; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+  .rel-arrow { color: var(--accent2); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>Schema <span>Manager</span></h1>
+  <a href="index.html">← Back to Dashboard</a>
+</div>
+
+<div class="conn-bar">
+  <span style="color:var(--text2)">URL:</span>
+  <input type="text" id="connUrl" placeholder="https://xxx.supabase.co" />
+  <span style="color:var(--text2)">Key:</span>
+  <input type="password" id="connKey" placeholder="service_role key" />
+  <button onclick="connectAndLoad()">Connect</button>
+  <span class="conn-status" id="connStatus">Not connected</span>
+</div>
+
+<div class="layout">
+  <div class="sidebar" id="sidebar">
+    <h3>Schemas & Tables</h3>
+    <div id="schemaNav"></div>
+  </div>
+
+  <div class="content" id="content">
+    <div class="welcome" id="welcomeView">
+      <h2>Schema Manager</h2>
+      <p>Browse your database structure, view column details, and run SQL. Select a table from the sidebar to see its structure.</p>
+    </div>
+    <div id="tableView" style="display:none;"></div>
+
+    <!-- SQL Runner -->
+    <div class="sql-section">
+      <h3>SQL Runner</h3>
+      <textarea class="sql-editor" id="sqlEditor" placeholder="-- Enter SQL here and click Run...
+-- Example: SELECT * FROM core.organizations LIMIT 10;"></textarea>
+      <div class="sql-buttons">
+        <button class="btn-run" onclick="runSQL()">▶ Run SQL</button>
+        <button class="btn-load" onclick="loadMigration()">📋 Load Migration Script</button>
+      </div>
+      <div class="sql-result" id="sqlResult"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let SUPABASE_URL = '';
+let SUPABASE_KEY = '';
+
+const SCHEMA_CONFIG = [
+  { name: 'core', color: '#6c5ce7', tables: [
+    { name: 'organizations', comment: 'Vet clinics, Companah locations, facilities' },
+    { name: 'contacts', comment: 'All people — owners, vet staff, team members' },
+    { name: 'pets', comment: 'The animals — linked to their owner' }
+  ]},
+  { name: 'pricing', color: '#00b894', tables: [
+    { name: 'products', comment: 'Product/service catalog with SKUs' },
+    { name: 'partner_rates', comment: 'Per-partner wholesale rates' }
+  ]},
+  { name: 'orders', color: '#fdcb6e', tables: [
+    { name: 'orders', comment: 'Cremation orders from intake to delivery' },
+    { name: 'line_items', comment: 'Products/services on an order' },
+    { name: 'care_plans', comment: 'Vessel, prints, engraving details' },
+    { name: 'memorials', comment: 'Tribute pages with photos' }
+  ]},
+  { name: 'operations', color: '#e17055', tables: [
+    { name: 'machines', comment: 'Cremation equipment registry' },
+    { name: 'runs', comment: 'Processing runs — date, chemicals, weight' },
+    { name: 'run_pets', comment: 'Which orders in which run' }
+  ]},
+  { name: 'billing', color: '#74b9ff', tables: [
+    { name: 'invoices', comment: 'Invoice headers with QBO sync' },
+    { name: 'invoice_line_items', comment: 'Line items — product, qty, rate' }
+  ]},
+  { name: 'workflows', color: '#a29bfe', tables: [
+    { name: 'templates', comment: 'Reusable workflow blueprints' },
+    { name: 'tasks', comment: 'Work items linked to orders' },
+    { name: 'comments', comment: 'Discussion on tasks' }
+  ]},
+  { name: 'partners', color: '#fd79a8', tables: [
+    { name: 'profiles', comment: 'Partner config — tier, billing, rates' },
+    { name: 'referrals', comment: 'Which orders from which partner' }
+  ]},
+  { name: 'clients', color: '#55efc4', tables: [
+    { name: 'portal_access', comment: 'Token-based order status access' },
+    { name: 'reviews', comment: 'Review request lifecycle' }
+  ]},
+  { name: 'logistics', color: '#ffeaa7', tables: [
+    { name: 'locations', comment: 'Places Companah visits' },
+    { name: 'routes', comment: 'Delivery/pickup trips' },
+    { name: 'stops', comment: 'Locations visited on a route' },
+    { name: 'stop_items', comment: 'What happened at each stop' }
+  ]},
+];
+
+// Check URL params for credentials
+const params = new URLSearchParams(window.location.search);
+if (params.get('url') && params.get('key')) {
+  document.getElementById('connUrl').value = params.get('url');
+  document.getElementById('connKey').value = params.get('key');
+  window.addEventListener('DOMContentLoaded', () => setTimeout(connectAndLoad, 100));
+}
+
+function buildSidebar() {
+  const nav = document.getElementById('schemaNav');
+  nav.innerHTML = SCHEMA_CONFIG.map(s => `
+    <div class="schema-group">
+      <div class="schema-label">
+        <span class="dot" style="background:${s.color}"></span>
+        ${s.name}
+      </div>
+      <div class="table-list">
+        ${s.tables.map(t => `
+          <div class="table-item" onclick="showTable('${s.name}','${t.name}','${s.color}')" id="nav-${s.name}-${t.name}">
+            ${t.name}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+async function connectAndLoad() {
+  SUPABASE_URL = document.getElementById('connUrl').value.trim().replace(/\/$/, '');
+  SUPABASE_KEY = document.getElementById('connKey').value.trim();
+
+  const status = document.getElementById('connStatus');
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    status.textContent = '● Connected';
+    status.className = 'conn-status connected';
+    buildSidebar();
+  } catch (e) {
+    status.textContent = `✗ ${e.message}`;
+    status.className = 'conn-status';
+  }
+}
+
+async function showTable(schema, table, color) {
+  // Highlight active
+  document.querySelectorAll('.table-item').forEach(el => el.classList.remove('active'));
+  const navEl = document.getElementById(`nav-${schema}-${table}`);
+  if (navEl) navEl.classList.add('active');
+
+  document.getElementById('welcomeView').style.display = 'none';
+  const view = document.getElementById('tableView');
+  view.style.display = 'block';
+
+  const config = SCHEMA_CONFIG.find(s => s.name === schema);
+  const tableConfig = config?.tables.find(t => t.name === table);
+
+  view.innerHTML = `<div class="loading"><span class="spinner" style="display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.6s linear infinite;margin-right:8px;vertical-align:middle;"></span> Loading table structure...</div>`;
+
+  try {
+    // Use OpenAPI spec to get column info
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/?apikey=${SUPABASE_KEY}`, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Accept-Profile': schema
+      }
+    });
+    const spec = await res.json();
+
+    // Get table definition from spec
+    const tableDef = spec.definitions?.[table];
+
+    if (!tableDef) {
+      // Table not found in API — try a direct query to get info
+      view.innerHTML = `
+        <div class="table-header">
+          <h2 style="color:${color}">${table}</h2>
+          <div class="path">${schema}.${table}</div>
+          <div class="comment">${tableConfig?.comment || ''}</div>
+        </div>
+        <div style="padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:12px;text-align:center;color:var(--text2);">
+          <p style="font-size:16px;margin-bottom:8px;">Table not found in API</p>
+          <p style="font-size:13px;">This table may not exist yet. Run the migration SQL to create it.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const props = tableDef.properties || {};
+    const required = tableDef.required || [];
+
+    // Build column rows
+    let columnsHTML = Object.entries(props).map(([colName, colDef]) => {
+      const isPK = colName === 'id';
+      const isFK = colDef.description?.includes('fk') || colName.endsWith('_id') && colName !== 'id';
+      const type = colDef.format || colDef.type || 'unknown';
+      const nullable = !required.includes(colName);
+      const defaultVal = colDef.default || '';
+      const desc = colDef.description || '';
+
+      return `<tr>
+        <td>
+          <span class="col-name">${colName}</span>
+          ${isPK ? '<span class="badge-pk">PK</span>' : ''}
+          ${isFK ? '<span class="badge-fk">FK</span>' : ''}
+        </td>
+        <td><span class="col-type">${type}</span></td>
+        <td class="col-nullable">${nullable ? 'yes' : 'no'}</td>
+        <td style="color:var(--text2);font-size:13px;">${defaultVal}</td>
+        <td style="color:var(--text2);font-size:13px;">${desc}</td>
+      </tr>`;
+    }).join('');
+
+    // Get record count
+    let recordCount = '—';
+    try {
+      const countRes = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=id&limit=0`, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Accept-Profile': schema,
+          'Prefer': 'count=exact'
+        }
+      });
+      const range = countRes.headers.get('content-range');
+      if (range) recordCount = parseInt(range.split('/')[1]) || 0;
+    } catch(e) {}
+
+    view.innerHTML = `
+      <div class="table-header">
+        <h2 style="color:${color}">${table}</h2>
+        <div class="path">${schema}.${table} · ${Object.keys(props).length} columns · ${typeof recordCount === 'number' ? recordCount.toLocaleString() : recordCount} records</div>
+        <div class="comment">${tableConfig?.comment || ''}</div>
+      </div>
+      <table class="columns-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>${columnsHTML}</tbody>
+      </table>
+    `;
+  } catch (e) {
+    view.innerHTML = `<div style="color:var(--red);padding:24px;">Error loading table: ${e.message}</div>`;
+  }
+}
+
+async function runSQL() {
+  const sql = document.getElementById('sqlEditor').value.trim();
+  const resultEl = document.getElementById('sqlResult');
+  if (!sql) return;
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    resultEl.style.display = 'block';
+    resultEl.className = 'sql-result error';
+    resultEl.textContent = 'Not connected. Enter your URL and key above.';
+    return;
+  }
+
+  resultEl.style.display = 'block';
+  resultEl.className = 'sql-result';
+  resultEl.textContent = 'Running...';
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ query: sql })
+    });
+
+    // If RPC doesn't work, try the SQL endpoint (pg_net or direct)
+    if (!res.ok) {
+      // Use the Supabase Management API SQL endpoint
+      const sqlRes = await fetch(`${SUPABASE_URL}/pg/query`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ query: sql })
+      });
+
+      if (!sqlRes.ok) {
+        // Final fallback: instruct user to use SQL editor
+        resultEl.className = 'sql-result error';
+        resultEl.textContent = `The SQL API endpoint isn't available via REST.\n\nTo run this SQL:\n1. Copy the SQL above\n2. Go to your Supabase Dashboard → SQL Editor\n3. Paste and click Run\n\nAlternatively, enable the pg_net extension or create an RPC function.`;
+        return;
+      }
+
+      const data = await sqlRes.json();
+      resultEl.className = 'sql-result success';
+      resultEl.textContent = JSON.stringify(data, null, 2);
+    } else {
+      const data = await res.json();
+      resultEl.className = 'sql-result success';
+      resultEl.textContent = JSON.stringify(data, null, 2);
+    }
+  } catch (e) {
+    resultEl.className = 'sql-result error';
+    resultEl.textContent = `Error: ${e.message}\n\nTo run DDL statements (CREATE TABLE, etc.), use the Supabase Dashboard SQL Editor directly.`;
+  }
+}
+
+async function loadMigration() {
+  const editor = document.getElementById('sqlEditor');
+  editor.value = 'Loading migration script...';
+  try {
+    const res = await fetch('companah-supabase-migration.sql');
+    if (res.ok) {
+      editor.value = await res.text();
+    } else {
+      editor.value = '-- Could not load migration file.\n-- Make sure companah-supabase-migration.sql is in the same folder as this HTML file.';
+    }
+  } catch (e) {
+    editor.value = '-- Could not load migration file.\n-- Make sure companah-supabase-migration.sql is in the same folder as this HTML file.';
+  }
+}
+
+// Init sidebar with schema config even before connecting
+buildSidebar();
+
+// Auto-connect from URL params
+if (params.get('url') && params.get('key')) {
+  SUPABASE_URL = params.get('url');
+  SUPABASE_KEY = params.get('key');
+  document.getElementById('connUrl').value = SUPABASE_URL;
+  document.getElementById('connKey').value = SUPABASE_KEY;
+  connectAndLoad();
+}
+</script>
+<style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+</body>
+</html>

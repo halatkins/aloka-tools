@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Companah — Your Database, Explained</title>
+<style>
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --surface2: #232736; --surface3: #2a2e3f;
+    --border: #2e3348; --text: #e2e4ea; --text-dim: #8b8fa3; --text-xs: #636780;
+    --accent: #6c63ff; --accent-hover: #7d75ff; --accent-dim: rgba(108,99,255,0.12);
+    --green: #3ecf8e; --green-dim: rgba(62,207,142,0.12);
+    --red: #ef4444; --red-dim: rgba(239,68,68,0.12);
+    --yellow: #f59e0b; --yellow-dim: rgba(245,158,11,0.12);
+    --blue: #3b82f6; --blue-dim: rgba(59,130,246,0.12);
+    --orange: #f97316; --orange-dim: rgba(249,115,22,0.12);
+    --pink: #ec4899; --pink-dim: rgba(236,72,153,0.12);
+    --teal: #14b8a6; --teal-dim: rgba(20,184,166,0.12);
+    --cyan: #06b6d4; --cyan-dim: rgba(6,182,212,0.12);
+    --lime: #84cc16; --lime-dim: rgba(132,204,22,0.12);
+    --radius: 8px; --radius-lg: 12px; --radius-xl: 16px;
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; }
+
+  /* Header */
+  .hero { text-align: center; padding: 48px 24px 32px; border-bottom: 1px solid var(--border); }
+  .hero h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+  .hero p { color: var(--text-dim); font-size: 15px; max-width: 560px; margin: 0 auto; }
+
+  /* Tab nav */
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); padding: 0 24px; background: var(--surface); position: sticky; top: 0; z-index: 50; overflow-x: auto; }
+  .tab { padding: 12px 20px; font-size: 13px; font-weight: 500; color: var(--text-dim); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .container { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* Concept cards */
+  .concept-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+  .concept-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; }
+  .concept-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+  .concept-card .subtitle { font-size: 11px; color: var(--text-xs); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .concept-card p { font-size: 13px; color: var(--text-dim); }
+  .concept-card.full { grid-column: 1 / -1; }
+
+  /* Compare blocks */
+  .compare { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0; margin: 24px 0; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+  .compare-side { padding: 20px; }
+  .compare-left { background: var(--yellow-dim); }
+  .compare-right { background: var(--accent-dim); }
+  .compare-arrow { display: flex; align-items: center; justify-content: center; padding: 0 12px; font-size: 20px; color: var(--text-dim); background: var(--surface); }
+  .compare-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .compare-left .compare-label { color: var(--yellow); }
+  .compare-right .compare-label { color: var(--accent); }
+  .compare-content { font-size: 13px; color: var(--text); }
+  .compare-content code { font-family: var(--mono); font-size: 12px; background: rgba(0,0,0,0.2); padding: 1px 5px; border-radius: 4px; }
+
+  /* Schema map */
+  .schema-map { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 24px 0; }
+  .schema-box { border-radius: var(--radius-lg); padding: 16px; cursor: pointer; transition: all 0.2s; border: 2px solid transparent; }
+  .schema-box:hover { transform: translateY(-2px); }
+  .schema-box.selected { border-color: white; }
+  .schema-box .schema-icon { font-size: 24px; margin-bottom: 8px; }
+  .schema-box .schema-name { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+  .schema-box .schema-desc { font-size: 11px; opacity: 0.8; }
+  .schema-box .schema-tables { font-size: 11px; opacity: 0.6; margin-top: 6px; }
+
+  /* Schema colors */
+  .schema-core { background: var(--blue-dim); color: var(--blue); }
+  .schema-orders { background: var(--accent-dim); color: var(--accent); }
+  .schema-operations { background: var(--orange-dim); color: var(--orange); }
+  .schema-billing { background: var(--green-dim); color: var(--green); }
+  .schema-pricing { background: var(--yellow-dim); color: var(--yellow); }
+  .schema-workflows { background: var(--teal-dim); color: var(--teal); }
+  .schema-partners { background: var(--pink-dim); color: var(--pink); }
+  .schema-clients { background: var(--cyan-dim); color: var(--cyan); }
+  .schema-logistics { background: var(--lime-dim); color: var(--lime); }
+
+  /* Schema detail */
+  .schema-detail { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; margin-top: 16px; display: none; }
+  .schema-detail.visible { display: block; }
+  .schema-detail h3 { font-size: 18px; margin-bottom: 4px; }
+  .schema-detail .detail-desc { color: var(--text-dim); font-size: 14px; margin-bottom: 16px; }
+  .table-card { background: var(--surface2); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+  .table-card h4 { font-size: 14px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+  .table-card .from-at { font-size: 11px; color: var(--yellow); margin-bottom: 8px; }
+  .table-card p { font-size: 13px; color: var(--text-dim); margin-bottom: 8px; }
+  .field-list { display: flex; flex-wrap: wrap; gap: 4px; }
+  .field-tag { font-size: 11px; font-family: var(--mono); background: var(--surface3); color: var(--text-dim); padding: 2px 8px; border-radius: 4px; }
+  .field-tag.fk { background: var(--accent-dim); color: var(--accent); }
+
+  /* Relationship explorer */
+  .rel-container { margin: 24px 0; }
+  .rel-scenario { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 12px; cursor: pointer; transition: all 0.15s; }
+  .rel-scenario:hover { border-color: var(--accent); }
+  .rel-scenario h4 { font-size: 14px; margin-bottom: 4px; }
+  .rel-scenario .rel-question { color: var(--text-dim); font-size: 13px; }
+  .rel-answer { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .rel-scenario.open .rel-answer { display: block; }
+  .rel-path { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+  .rel-node { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 12px; font-size: 12px; font-family: var(--mono); }
+  .rel-arrow { color: var(--accent); font-size: 16px; }
+  .rel-explain { font-size: 13px; color: var(--text-dim); }
+  .rel-compare { font-size: 12px; color: var(--yellow); background: var(--yellow-dim); padding: 8px 12px; border-radius: var(--radius); margin-top: 8px; }
+
+  /* Airtable mapping */
+  .mapping-row { display: grid; grid-template-columns: 200px auto 1fr; gap: 0; border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; overflow: hidden; background: var(--surface); }
+  .mapping-at { padding: 12px 16px; background: var(--yellow-dim); font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+  .mapping-arrow { padding: 12px 8px; display: flex; align-items: center; color: var(--text-dim); }
+  .mapping-sb { padding: 12px 16px; font-size: 13px; }
+  .mapping-sb code { font-family: var(--mono); font-size: 12px; background: var(--accent-dim); color: var(--accent); padding: 2px 6px; border-radius: 4px; }
+  .mapping-sb .mapping-note { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+  .mapping-header { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-xs); padding: 12px 16px; }
+
+  /* Glossary */
+  .glossary-item { padding: 16px 0; border-bottom: 1px solid var(--border); }
+  .glossary-item:last-child { border-bottom: none; }
+  .glossary-term { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .glossary-airtable { font-size: 12px; color: var(--yellow); margin-bottom: 6px; }
+  .glossary-def { font-size: 13px; color: var(--text-dim); }
+
+  h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  h2 + p { color: var(--text-dim); font-size: 14px; margin-bottom: 16px; }
+  .section-break { height: 1px; background: var(--border); margin: 32px 0; }
+
+  @media (max-width: 768px) {
+    .concept-grid, .schema-map { grid-template-columns: 1fr; }
+    .compare { grid-template-columns: 1fr; }
+    .compare-arrow { padding: 8px; }
+    .mapping-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>Your Companah Database, Explained</h1>
+  <p>A visual guide to your Supabase database — how it's organized, how it connects, and how it maps to what you had in Airtable.</p>
+</div>
+
+<div class="tabs" id="tabs">
+  <div class="tab active" onclick="showTab('big-picture')">The Big Picture</div>
+  <div class="tab" onclick="showTab('schemas')">Explore Schemas</div>
+  <div class="tab" onclick="showTab('relationships')">How Data Connects</div>
+  <div class="tab" onclick="showTab('airtable-map')">Airtable → Supabase</div>
+  <div class="tab" onclick="showTab('glossary')">Glossary</div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- TAB 1: BIG PICTURE                         -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="container">
+<div class="section active" id="sec-big-picture">
+
+  <h2>Think of it like a building</h2>
+  <p>In Airtable, everything lives on one floor — one base, a handful of tables, and you stuff as much as you can into each one. In Supabase, you have an entire building with organized floors (schemas), rooms (tables), and hallways connecting them (relationships).</p>
+
+  <div class="concept-grid">
+    <div class="concept-card">
+      <div class="subtitle">Airtable</div>
+      <h3>🏠 One big room</h3>
+      <p>All your tables sit side by side in a single base. Your Pets table had 90+ columns because everything — the pet, the order, the care plan, the vet — was jammed into one row.</p>
+    </div>
+    <div class="concept-card">
+      <div class="subtitle">Supabase</div>
+      <h3>🏢 An organized building</h3>
+      <p>Your data is split into 9 "floors" (schemas), each with its own purpose. The pet is in one table, the order in another, the care plan in a third — all linked together by IDs.</p>
+    </div>
+  </div>
+
+  <div class="section-break"></div>
+
+  <h2>Three concepts that are different</h2>
+  <p>Everything else works pretty much the same — rows are rows, columns are columns. These three things are what's actually new.</p>
+
+  <div class="compare">
+    <div class="compare-side compare-left">
+      <div class="compare-label">Airtable: Linked Records</div>
+      <div class="compare-content">You click a cell and pick a record from another table. Airtable shows it as a clickable chip. Under the hood, it stores both sides of the link.</div>
+    </div>
+    <div class="compare-arrow">→</div>
+    <div class="compare-side compare-right">
+      <div class="compare-label">Supabase: Foreign Keys</div>
+      <div class="compare-content">A column like <code>owner_id</code> stores the ID of a record in another table. Same idea — it's just an ID instead of a clickable chip. The app layer makes it feel the same.</div>
+    </div>
+  </div>
+
+  <div class="compare">
+    <div class="compare-side compare-left">
+      <div class="compare-label">Airtable: One Base</div>
+      <div class="compare-content">All tables live together in one place. You might use color-coded views to organize, but structurally it's all flat.</div>
+    </div>
+    <div class="compare-arrow">→</div>
+    <div class="compare-side compare-right">
+      <div class="compare-label">Supabase: Schemas</div>
+      <div class="compare-content">Schemas are like named folders inside your database. <code>core.pets</code> means "the pets table inside the core folder." It's purely organizational — all schemas are in the same database and can reference each other.</div>
+    </div>
+  </div>
+
+  <div class="compare">
+    <div class="compare-side compare-left">
+      <div class="compare-label">Airtable: Mega-tables</div>
+      <div class="compare-content">Your Pets table had the pet's name AND the order status AND the care plan AND the billing info AND the vet info all in one row. Need a new field? Just add another column.</div>
+    </div>
+    <div class="compare-arrow">→</div>
+    <div class="compare-side compare-right">
+      <div class="compare-label">Supabase: Normalized Tables</div>
+      <div class="compare-content">Each thing gets its own table. The pet is one row, the order is another row, the care plan is a third row. They connect through IDs. This means less duplication, cleaner data, and each table stays focused.</div>
+    </div>
+  </div>
+
+  <div class="concept-card full" style="margin-top:24px; background:var(--green-dim); border-color:var(--green);">
+    <h3 style="color:var(--green);">💡 The key insight</h3>
+    <p style="color:var(--text);">When you look at a table in Supabase and see a column ending in <code style="background:rgba(0,0,0,0.2);padding:1px 5px;border-radius:4px;font-family:var(--mono);font-size:12px;">_id</code>, that's a pointer to a record in another table — just like a linked record in Airtable. That's really the main difference. Everything else is the same: rows, columns, text, numbers, dates.</p>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- TAB 2: EXPLORE SCHEMAS                     -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section" id="sec-schemas">
+
+  <h2>Your 9 schemas</h2>
+  <p>Click any schema to explore its tables and see what data lives there.</p>
+
+  <div class="schema-map">
+    <div class="schema-box schema-core" onclick="selectSchema('core')">
+      <div class="schema-icon">🧬</div>
+      <div class="schema-name">core</div>
+      <div class="schema-desc">People, pets, organizations</div>
+      <div class="schema-tables">3 tables</div>
+    </div>
+    <div class="schema-box schema-orders" onclick="selectSchema('orders')">
+      <div class="schema-icon">📋</div>
+      <div class="schema-name">orders</div>
+      <div class="schema-desc">Cremation orders & care plans</div>
+      <div class="schema-tables">4 tables</div>
+    </div>
+    <div class="schema-box schema-operations" onclick="selectSchema('operations')">
+      <div class="schema-icon">⚙️</div>
+      <div class="schema-name">operations</div>
+      <div class="schema-desc">Machines & processing runs</div>
+      <div class="schema-tables">3 tables</div>
+    </div>
+    <div class="schema-box schema-billing" onclick="selectSchema('billing')">
+      <div class="schema-icon">💰</div>
+      <div class="schema-name">billing</div>
+      <div class="schema-desc">Invoices & QBO sync</div>
+      <div class="schema-tables">2 tables</div>
+    </div>
+    <div class="schema-box schema-pricing" onclick="selectSchema('pricing')">
+      <div class="schema-icon">🏷️</div>
+      <div class="schema-name">pricing</div>
+      <div class="schema-desc">Products & partner rates</div>
+      <div class="schema-tables">2 tables</div>
+    </div>
+    <div class="schema-box schema-workflows" onclick="selectSchema('workflows')">
+      <div class="schema-icon">✅</div>
+      <div class="schema-name">workflows</div>
+      <div class="schema-desc">Tasks & assignments</div>
+      <div class="schema-tables">3 tables</div>
+    </div>
+    <div class="schema-box schema-partners" onclick="selectSchema('partners')">
+      <div class="schema-icon">🤝</div>
+      <div class="schema-name">partners</div>
+      <div class="schema-desc">Vet portal & referrals</div>
+      <div class="schema-tables">2 tables</div>
+    </div>
+    <div class="schema-box schema-clients" onclick="selectSchema('clients')">
+      <div class="schema-icon">🐾</div>
+      <div class="schema-name">clients</div>
+      <div class="schema-desc">Client portal & reviews</div>
+      <div class="schema-tables">2 tables</div>
+    </div>
+    <div class="schema-box schema-logistics" onclick="selectSchema('logistics')">
+      <div class="schema-icon">🚐</div>
+      <div class="schema-name">logistics</div>
+      <div class="schema-desc">Locations, routes, stops & deliveries</div>
+      <div class="schema-tables">3 tables</div>
+    </div>
+  </div>
+
+  <!-- CORE -->
+  <div class="schema-detail" id="detail-core">
+    <h3>🧬 core — The Foundation</h3>
+    <div class="detail-desc">Shared by every app. This is where people, pets, and organizations live. Think of it as your address book and pet registry combined.</div>
+
+    <div class="table-card">
+      <h4>📇 organizations</h4>
+      <div class="from-at">← From Airtable: Veterinarians + Vet Partner Table</div>
+      <p>Every vet clinic, Companah location, and facility. The <code>type</code> column tells you what kind it is.</p>
+      <div class="field-list">
+        <span class="field-tag">name</span><span class="field-tag">type</span><span class="field-tag">abbreviation</span><span class="field-tag">phone</span><span class="field-tag">email</span><span class="field-tag">address</span><span class="field-tag">city</span><span class="field-tag">state</span><span class="field-tag">zip</span><span class="field-tag">region</span>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <h4>👤 contacts</h4>
+      <div class="from-at">← From Airtable: Clients + App Users + owner fields from Pets</div>
+      <p>Every person — pet owners, vet staff, your team. The <code>role</code> column tells you who they are. The <code>organization_id</code> links them to a vet practice or Companah.</p>
+      <div class="field-list">
+        <span class="field-tag">first_name</span><span class="field-tag">last_name</span><span class="field-tag">email</span><span class="field-tag">phone</span><span class="field-tag">role</span><span class="field-tag fk">organization_id →</span><span class="field-tag">address</span><span class="field-tag">region</span>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <h4>🐾 pets</h4>
+      <div class="from-at">← From Airtable: Pet-specific fields from the Pets mega-table</div>
+      <p>Just the animal itself — name, species, breed, weight, and date of passing. Everything about the cremation order lives elsewhere now.</p>
+      <div class="field-list">
+        <span class="field-tag">name</span><span class="field-tag">species</span><span class="field-tag">breed</span><span class="field-tag">color</span><span class="field-tag">gender</span><span class="field-tag">weight_lbs</span><span class="field-tag">date_of_passing</span><span class="field-tag fk">owner_id →</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ORDERS -->
+  <div class="schema-detail" id="detail-orders">
+    <h3>📋 orders — The Heart of Operations</h3>
+    <div class="detail-desc">This is where the Airtable Pets mega-table got properly split up. Each cremation job is an order, and the care plan details get their own table.</div>
+
+    <div class="table-card">
+      <h4>📋 orders</h4>
+      <div class="from-at">← From Airtable: Status, dates, locations, delivery, service type from Pets</div>
+      <p>A cremation order from intake to delivery. Tracks the full lifecycle: where the pet is, what service was requested, who referred it, and when everything happened.</p>
+      <div class="field-list">
+        <span class="field-tag">companah_id</span><span class="field-tag">nfc_id</span><span class="field-tag">status</span><span class="field-tag">service_type</span><span class="field-tag">intake_location</span><span class="field-tag">current_location</span><span class="field-tag">date_received</span><span class="field-tag">cremation_date</span><span class="field-tag">delivery_method</span><span class="field-tag fk">pet_id →</span><span class="field-tag fk">client_contact_id →</span><span class="field-tag fk">vet_organization_id →</span>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <h4>💜 care_plans</h4>
+      <div class="from-at">← From Airtable: Vessel, prints, memorial, engraving fields from Pets</div>
+      <p>What the owner chose for their pet — the vessel, how many paw prints, engraving details, memorial package. One care plan per order.</p>
+      <div class="field-list">
+        <span class="field-tag fk">order_id →</span><span class="field-tag">vessel</span><span class="field-tag">memorial_package</span><span class="field-tag">clay_prints</span><span class="field-tag">nose_prints</span><span class="field-tag">engraved_prints</span><span class="field-tag">engraving_text</span><span class="field-tag">is_completed</span>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <h4>🧾 line_items</h4>
+      <div class="from-at">← New — derived from orders + pricing</div>
+      <p>What's being charged on an order — which products/services, at what price, and how many. Links to the products catalog.</p>
+      <div class="field-list">
+        <span class="field-tag fk">order_id →</span><span class="field-tag fk">product_id →</span><span class="field-tag">description</span><span class="field-tag">quantity</span><span class="field-tag">unit_price</span><span class="field-tag">total</span>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <h4>🕯️ memorials</h4>
+      <div class="from-at">← From Airtable: Memorial fields + new feature</div>
+      <p>Public tribute pages with photos and text. Optional — not every order will have one.</p>
+      <div class="field-list">
+        <span class="field-tag fk">order_id →</span><span class="field-tag fk">pet_id →</span><span class="field-tag">tribute_text</span><span class="field-tag">photo_urls</span><span class="field-tag">is_public</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPERATIONS -->
+  <div class="schema-detail" id="detail-operations">
+    <h3>⚙️ operations — The Machines</h3>
+    <div class="detail-desc">This replaces your three separate Airtable tables (Donatello, Michelangelo, Leonardo) with one unified model. Adding a new machine is just adding a row, not creating a whole new table.</div>
+
+    <div class="table-card">
+      <h4>🔧 machines</h4>
+      <div class="from-at">← From Airtable: Donatello, Michelangelo, Leonardo (the tables themselves)</div>
+      <p>Your cremation equipment registry. Currently three machines — but the structure supports any number.</p>
+      <div class="field-list">
+        <span class="field-tag">name</span><span class="field-tag">machine_type</span><span class="field-tag">facility</span><span class="field-tag">is_active</span>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <h4>🔥 runs</h4>
+      <div class="from-at">← From Airtable: Run data from each machine table</div>
+      <p>Each processing run on a machine — the date, chemical weights, bulk weight, and Slack confirmation.</p>
+      <div class="field-list">
+        <span class="field-tag fk">machine_id →</span><span class="field-tag">process_number</span><span class="field-tag">run_date</span><span class="field-tag">koh_weight_lbs</span><span class="field-tag">naoh_weight_lbs</span><span class="field-tag">bulk_weight_lbs</span><span class="field-tag">slack_confirmation</span>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <h4>🔗 run_pets</h4>
+      <div class="from-at">← From Airtable: Pets linked record on each machine table</div>
+      <p>The junction table that connects orders to runs. A communal run can have multiple pets. Each entry captures the pet's weight at the time of processing.</p>
+      <div class="field-list">
+        <span class="field-tag fk">run_id →</span><span class="field-tag fk">order_id →</span><span class="field-tag">pet_weight_lbs</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BILLING -->
+  <div class="schema-detail" id="detail-billing">
+    <h3>💰 billing — QuickBooks Integration</h3>
+    <div class="detail-desc">Invoices and line items that sync with QuickBooks Online. All the QBO IDs are preserved so you can match records between systems.</div>
+
+    <div class="table-card">
+      <h4>📄 invoices</h4>
+      <div class="from-at">← From Airtable: QBO Invoices</div>
+      <p>Invoice headers with customer info, amounts, and payment status. Can link to an order, a client, or a vet partner.</p>
+      <div class="field-list">
+        <span class="field-tag fk">order_id →</span><span class="field-tag fk">client_contact_id →</span><span class="field-tag fk">vet_organization_id →</span><span class="field-tag">qbo_invoice_number</span><span class="field-tag">invoice_amount</span><span class="field-tag">balance_due</span><span class="field-tag">status</span>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <h4>📝 invoice_line_items</h4>
+      <div class="from-at">← From Airtable: QBO Invoice Table</div>
+      <p>Individual line items — what product, how many, at what rate, and whether it's taxable.</p>
+      <div class="field-list">
+        <span class="field-tag fk">invoice_id →</span><span class="field-tag fk">product_id →</span><span class="field-tag">description</span><span class="field-tag">quantity</span><span class="field-tag">rate</span><span class="field-tag">amount</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRICING -->
+  <div class="schema-detail" id="detail-pricing">
+    <h3>🏷️ pricing — Product Catalog</h3>
+    <div class="detail-desc">All your services and products with their prices. Also handles per-partner wholesale rates.</div>
+
+    <div class="table-card">
+      <h4>📦 products</h4>
+      <div class="from-at">← From Airtable: QBO Products</div>
+      <p>Cremation services, urns, keepsakes, paw prints, delivery fees — everything you offer with SKUs and QBO account mapping.</p>
+      <div class="field-list">
+        <span class="field-tag">name</span><span class="field-tag">sku</span><span class="field-tag">category</span><span class="field-tag">default_price</span><span class="field-tag">is_taxable</span><span class="field-tag">qbo_income_account</span><span class="field-tag">is_active</span>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <h4>💲 partner_rates</h4>
+      <div class="from-at">← From Airtable: Wholesale rate fields on Veterinarians</div>
+      <p>Custom pricing for each vet partner by service type and weight range. Supports date ranges so you can update rates without losing history.</p>
+      <div class="field-list">
+        <span class="field-tag fk">organization_id →</span><span class="field-tag">service_type</span><span class="field-tag">weight_range</span><span class="field-tag">rate</span><span class="field-tag">effective_from</span><span class="field-tag">effective_to</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- WORKFLOWS -->
+  <div class="schema-detail" id="detail-workflows">
+    <h3>✅ workflows — Task Management</h3>
+    <div class="detail-desc">Brand new — replaces informal tracking. Reusable templates for standard processes, with tasks assigned to team members.</div>
+
+    <div class="table-card">
+      <h4>📐 templates</h4>
+      <div class="from-at">← New (not in Airtable)</div>
+      <p>Reusable workflow blueprints like "Standard Private Cremation" — a series of steps that get created as tasks when an order comes in.</p>
+      <div class="field-list">
+        <span class="field-tag">name</span><span class="field-tag">description</span><span class="field-tag">steps (JSON)</span><span class="field-tag">is_active</span>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <h4>☑️ tasks</h4>
+      <div class="from-at">← New (replaces informal tracking)</div>
+      <p>Individual work items — optionally linked to an order, assigned to someone, with status and priority tracking.</p>
+      <div class="field-list">
+        <span class="field-tag fk">order_id →</span><span class="field-tag fk">template_id →</span><span class="field-tag fk">assigned_to →</span><span class="field-tag">title</span><span class="field-tag">status</span><span class="field-tag">priority</span><span class="field-tag">due_date</span>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <h4>💬 comments</h4>
+      <div class="from-at">← New</div>
+      <p>Discussion on tasks — who said what and when.</p>
+      <div class="field-list">
+        <span class="field-tag fk">task_id →</span><span class="field-tag fk">author_id →</span><span class="field-tag">body</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PARTNERS -->
+  <div class="schema-detail" id="detail-partners">
+    <h3>🤝 partners — Vet Partner Portal</h3>
+    <div class="detail-desc">Everything specific to your vet partners — their tier, billing terms, portal access, and which orders came through them.</div>
+
+    <div class="table-card">
+      <h4>🏥 profiles</h4>
+      <div class="from-at">← From Airtable: Vet Partner Table + wholesale fields from Veterinarians</div>
+      <p>Partner-specific settings — tier (standard/preferred/premium), billing method, wholesale rates, QBO linkage, magic link for portal, and rating.</p>
+      <div class="field-list">
+        <span class="field-tag fk">organization_id →</span><span class="field-tag">tier</span><span class="field-tag">billing_method</span><span class="field-tag">wholesale_rate_individual</span><span class="field-tag">wholesale_rate_communal</span><span class="field-tag">rating</span><span class="field-tag">magic_link_url</span>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <h4>📨 referrals</h4>
+      <div class="from-at">← Derived from Vet? checkbox + Veterinarians link on Pets</div>
+      <p>Tracks which orders came through which partner and who made the referral.</p>
+      <div class="field-list">
+        <span class="field-tag fk">partner_profile_id →</span><span class="field-tag fk">order_id →</span><span class="field-tag fk">referring_contact_id →</span><span class="field-tag">referred_date</span><span class="field-tag">notes</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CLIENTS -->
+  <div class="schema-detail" id="detail-clients">
+    <h3>🐾 clients — Client Dashboard</h3>
+    <div class="detail-desc">Handles client-facing portal access and review tracking. Replaces the Adalo-specific fields from Airtable.</div>
+
+    <div class="table-card">
+      <h4>🔑 portal_access</h4>
+      <div class="from-at">← From Airtable: Ready for Adalo, Temp Pass from Clients</div>
+      <p>Token-based access for clients to check their order status online. Supports expiring links.</p>
+      <div class="field-list">
+        <span class="field-tag fk">contact_id →</span><span class="field-tag fk">order_id →</span><span class="field-tag">access_token</span><span class="field-tag">expires_at</span><span class="field-tag">last_accessed_at</span>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <h4>⭐ reviews</h4>
+      <div class="from-at">← From Airtable: Review Status, Review Request Sent, Review Notes from Clients</div>
+      <p>Tracks the review request lifecycle — whether you've asked for a review, whether they've responded, and any notes.</p>
+      <div class="field-list">
+        <span class="field-tag fk">contact_id →</span><span class="field-tag fk">order_id →</span><span class="field-tag">review_status</span><span class="field-tag">review_request_sent</span><span class="field-tag">review_notes</span><span class="field-tag">review_sent_date</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOGISTICS -->
+  <div class="schema-detail" id="detail-logistics">
+    <h3>🚐 logistics — Delivery & Pickup Tracking</h3>
+    <div class="detail-desc">Brand new — never tracked in Airtable. Models the physical movement of pets coming into your care and memorials going back to families. Locations are saved as reusable places with hours and notes, routes visit those locations as stops, and stops have items.</div>
+
+    <div class="table-card">
+      <h4>🏥 locations</h4>
+      <div class="from-at">← New (not in Airtable)</div>
+      <p>Your directory of places — vet clinics, client homes, Companah facilities. Each location is saved once with its name, address, hours, access notes (like "use the side entrance after 5pm"), and a contact person. If the location is a partner vet, it links to <code>core.organizations</code> so you can instantly see partner status. Reused across every route that visits that place.</p>
+      <div class="field-list">
+        <span class="field-tag">name</span><span class="field-tag fk">organization_id →</span><span class="field-tag">location_type</span><span class="field-tag">address</span><span class="field-tag">city</span><span class="field-tag">state</span><span class="field-tag">zip</span><span class="field-tag">region</span><span class="field-tag">contact_name</span><span class="field-tag">contact_phone</span><span class="field-tag">hours</span><span class="field-tag">access_notes</span><span class="field-tag">is_active</span>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <h4>🗺️ routes</h4>
+      <div class="from-at">← New (not in Airtable)</div>
+      <p>A single delivery/pickup trip. "Tuesday AM Central NC" is one route. Tracks who's driving, which vehicle, the region, and how long the trip took.</p>
+      <div class="field-list">
+        <span class="field-tag">route_date</span><span class="field-tag">route_name</span><span class="field-tag fk">driver_id →</span><span class="field-tag">vehicle</span><span class="field-tag">status</span><span class="field-tag">region</span><span class="field-tag">started_at</span><span class="field-tag">completed_at</span><span class="field-tag">notes</span>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <h4>📍 stops</h4>
+      <div class="from-at">← New (not in Airtable)</div>
+      <p>Each stop on a route, in order. Points to a saved location so you get the name, address, hours, and access notes automatically. For one-off stops (like a new client's home), there's an override address field. Tracks arrival/departure times and whether this is a pickup, delivery, or both.</p>
+      <div class="field-list">
+        <span class="field-tag fk">route_id →</span><span class="field-tag fk">location_id →</span><span class="field-tag">stop_order</span><span class="field-tag">stop_type</span><span class="field-tag">override_address</span><span class="field-tag">arrived_at</span><span class="field-tag">departed_at</span><span class="field-tag">status</span><span class="field-tag">notes</span>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <h4>📦 stop_items</h4>
+      <div class="from-at">← New (not in Airtable)</div>
+      <p>The junction between stops and orders. Each item says: "At this stop, we picked up / delivered this order." A single stop at a vet clinic might have 3 pickups (pets coming in) and 2 deliveries (memorials going out).</p>
+      <div class="field-list">
+        <span class="field-tag fk">stop_id →</span><span class="field-tag fk">order_id →</span><span class="field-tag">action</span><span class="field-tag">item_description</span><span class="field-tag">status</span><span class="field-tag">notes</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- TAB 3: RELATIONSHIPS                       -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section" id="sec-relationships">
+
+  <h2>How does data connect?</h2>
+  <p>Click any question to see how the tables link together — shown as a path you'd follow through the database. Each arrow is a foreign key (an <code style="font-family:var(--mono);font-size:12px;background:var(--surface2);padding:1px 5px;border-radius:4px;">_id</code> column pointing to another table).</p>
+
+  <div class="rel-container">
+
+    <div class="rel-scenario" onclick="this.classList.toggle('open')">
+      <h4>🐾 Who owns this pet?</h4>
+      <div class="rel-question">Given a pet, find the owner's contact info.</div>
+      <div class="rel-answer">
+        <div class="rel-path">
+          <span class="rel-node">core.pets</span>
+          <span class="rel-arrow">→ owner_id →</span>
+          <span class="rel-node">core.contacts</span>
+        </div>
+        <div class="rel-explain">The pet has an <code>owner_id</code> that points directly to a contact. One hop.</div>
+        <div class="rel-compare">In Airtable: You'd click the "Clients" linked record on the Pets row. Same idea, different presentation.</div>
+      </div>
+    </div>
+
+    <div class="rel-scenario" onclick="this.classList.toggle('open')">
+      <h4>📋 What's the order status for this pet?</h4>
+      <div class="rel-question">Given a pet, find out where they are in the cremation process.</div>
+      <div class="rel-answer">
+        <div class="rel-path">
+          <span class="rel-node">core.pets</span>
+          <span class="rel-arrow">← pet_id ←</span>
+          <span class="rel-node">orders.orders</span>
+        </div>
+        <div class="rel-explain">The order has a <code>pet_id</code> that points to the pet. You look up orders where <code>pet_id</code> matches your pet. The order has the <code>status</code>, <code>current_location</code>, and all the dates.</div>
+        <div class="rel-compare">In Airtable: The status was right there on the same Pets row — because everything was in one table. Now it's one table away.</div>
+      </div>
+    </div>
+
+    <div class="rel-scenario" onclick="this.classList.toggle('open')">
+      <h4>💜 What care plan options did the owner choose?</h4>
+      <div class="rel-question">Given an order, find the vessel, prints, and memorial details.</div>
+      <div class="rel-answer">
+        <div class="rel-path">
+          <span class="rel-node">orders.orders</span>
+          <span class="rel-arrow">← order_id ←</span>
+          <span class="rel-node">orders.care_plans</span>
+        </div>
+        <div class="rel-explain">Each order has one care plan. The care plan has the vessel, print counts, engraving text, and completion status.</div>
+        <div class="rel-compare">In Airtable: These were columns on the same Pets row (Vessel, Clay Prints, Memorial Package, etc.). Now they're in their own table.</div>
+      </div>
+    </div>
+
+    <div class="rel-scenario" onclick="this.classList.toggle('open')">
+      <h4>🏥 Which vet referred this order?</h4>
+      <div class="rel-question">Given an order, find the referring veterinary practice.</div>
+      <div class="rel-answer">
+        <div class="rel-path">
+          <span class="rel-node">orders.orders</span>
+          <span class="rel-arrow">→ vet_organization_id →</span>
+          <span class="rel-node">core.organizations</span>
+        </div>
+        <div class="rel-explain">The order has a <code>vet_organization_id</code> that points to the organization. The org has the clinic name, address, and contact info.</div>
+        <div class="rel-compare">In Airtable: You'd click the "Veterinarians" linked record on the Pets row.</div>
+      </div>
+    </div>
+
+    <div class="rel-scenario" onclick="this.classList.toggle('open')">
+      <h4>⚙️ Which machine processed this pet?</h4>
+      <div class="rel-question">Given an order, find out which machine it was cremated in and when.</div>
+      <div class="rel-answer">
+        <div class="rel-path">
+          <span class="rel-node">orders.orders</span>
+          <span class="rel-arrow">← order_id ←</span>
+          <span class="rel-node">operations.run_pets</span>
+          <span class="rel-arrow">→ run_id →</span>
+          <span class="rel-node">operations.runs</span>
+          <span class="rel-arrow">→ machine_id →</span>
+          <span class="rel-node">operations.machines</span>
+        </div>
+        <div class="rel-explain">This is a 3-hop path. The <code>run_pets</code> junction table connects orders to runs. The run tells you the date and chemicals used. The machine tells you which unit (Donatello, Michelangelo, or Leonardo).</div>
+        <div class="rel-compare">In Airtable: You'd look at the Donatello/Michelangelo/Leonardo linked record on the Pets row. Same data, just structured differently since all three machines share one model now.</div>
+      </div>
+    </div>
+
+    <div class="rel-scenario" onclick="this.classList.toggle('open')">
+      <h4>💰 What's been invoiced for this order?</h4>
+      <div class="rel-question">Given an order, find all invoices and what was charged.</div>
+      <div class="rel-answer">
+        <div class="rel-path">
+          <span class="rel-node">orders.orders</span>
+          <span class="rel-arrow">← order_id ←</span>
+          <span class="rel-node">billing.invoices</span>
+          <span class="rel-arrow">← invoice_id ←</span>
+          <span class="rel-node">billing.invoice_line_items</span>
+        </div>
+        <div class="rel-explain">An order can have multiple invoices. Each invoice has line items showing exactly what was charged. The line items link to <code>pricing.products</code> for the product details.</div>
+        <div class="rel-compare">In Airtable: You'd click the "QBO Invoices" linked record on the Pets row.</div>
+      </div>
+    </div>
+
+    <div class="rel-scenario" onclick="this.classList.toggle('open')">
+      <h4>🤝 What's this partner's pricing tier?</h4>
+      <div class="rel-question">Given a vet organization, find their partner tier, billing method, and wholesale rates.</div>
+      <div class="rel-answer">
+        <div class="rel-path">
+          <span class="rel-node">core.organizations</span>
+          <span class="rel-arrow">← organization_id ←</span>
+          <span class="rel-node">partners.profiles</span>
+        </div>
+        <div class="rel-explain">The org holds the basic practice info. The partner profile holds everything specific to the partnership — tier, rates, billing terms, portal access.</div>
+        <div class="rel-compare">In Airtable: These were split across the Veterinarians table and the Vet Partner Table. Now they're cleanly separated as "the org" and "the partnership details."</div>
+      </div>
+    </div>
+
+    <div class="rel-scenario" onclick="this.classList.toggle('open')">
+      <h4>🔍 The full picture: Pet → Owner → Vet → Order → Invoice</h4>
+      <div class="rel-question">Trace the complete journey from a pet to everything related to it.</div>
+      <div class="rel-answer">
+        <div class="rel-path">
+          <span class="rel-node">core.pets</span>
+          <span class="rel-arrow">→ owner_id →</span>
+          <span class="rel-node">core.contacts</span>
+        </div>
+        <div class="rel-path">
+          <span class="rel-node">core.pets</span>
+          <span class="rel-arrow">← pet_id ←</span>
+          <span class="rel-node">orders.orders</span>
+          <span class="rel-arrow">→ vet_organization_id →</span>
+          <span class="rel-node">core.organizations</span>
+        </div>
+        <div class="rel-path">
+          <span class="rel-node">orders.orders</span>
+          <span class="rel-arrow">← order_id ←</span>
+          <span class="rel-node">orders.care_plans</span>
+        </div>
+        <div class="rel-path">
+          <span class="rel-node">orders.orders</span>
+          <span class="rel-arrow">← order_id ←</span>
+          <span class="rel-node">billing.invoices</span>
+        </div>
+        <div class="rel-path">
+          <span class="rel-node">orders.orders</span>
+          <span class="rel-arrow">← order_id ←</span>
+          <span class="rel-node">operations.run_pets</span>
+          <span class="rel-arrow">→ run_id →</span>
+          <span class="rel-node">operations.runs</span>
+        </div>
+        <div class="rel-explain">From a single pet, you can reach everything: who owns them, which vet referred them, what cremation service was ordered, what care plan was chosen, which machine processed them, and what was invoiced. In Airtable, all of this was packed into one row. In Supabase, each piece lives in its proper place and connects through IDs.</div>
+      </div>
+    </div>
+
+    <div class="rel-scenario" onclick="this.classList.toggle('open')">
+      <h4>🚐 What route was this pet picked up on?</h4>
+      <div class="rel-question">Given an order, find out which delivery route brought the pet into care — including the driver, the stop, and other pets on the same run.</div>
+      <div class="rel-answer">
+        <div class="rel-path">
+          <span class="rel-node">orders.orders</span>
+          <span class="rel-arrow">← order_id ←</span>
+          <span class="rel-node">logistics.stop_items</span>
+          <span class="rel-arrow">→ stop_id →</span>
+          <span class="rel-node">logistics.stops</span>
+          <span class="rel-arrow">→ location_id →</span>
+          <span class="rel-node">logistics.locations</span>
+        </div>
+        <div class="rel-path">
+          <span class="rel-node">logistics.stops</span>
+          <span class="rel-arrow">→ route_id →</span>
+          <span class="rel-node">logistics.routes</span>
+        </div>
+        <div class="rel-explain">Filter <code>stop_items</code> where <code>action = 'pickup'</code> to find when/where the pet was collected. The stop points to a <code>location</code> which gives you the place name, address, hours, and access notes. The route gives you the driver and date.</div>
+        <div class="rel-compare">In Airtable: This data wasn't tracked at all. This is entirely new operational visibility.</div>
+      </div>
+    </div>
+
+    <div class="rel-scenario" onclick="this.classList.toggle('open')">
+      <h4>📍 Where were the memorials delivered and when?</h4>
+      <div class="rel-question">Given an order, find the delivery details — where the memorials went and who delivered them.</div>
+      <div class="rel-answer">
+        <div class="rel-path">
+          <span class="rel-node">orders.orders</span>
+          <span class="rel-arrow">← order_id ←</span>
+          <span class="rel-node">logistics.stop_items</span>
+          <span class="rel-arrow">→ stop_id →</span>
+          <span class="rel-node">logistics.stops</span>
+        </div>
+        <div class="rel-explain">Filter <code>stop_items</code> where <code>action = 'delivery'</code>. The stop points to a <code>location</code> with the full address, hours, and access notes. If the location is a partner vet, it links to <code>core.organizations</code>. The stop's route tells you who drove.</div>
+        <div class="rel-compare">In Airtable: You tracked <code>date_returned</code> and <code>delivery_method</code> on the Pets row, but not the actual route, stop sequence, or physical address of delivery.</div>
+      </div>
+    </div>
+
+    <div class="rel-scenario" onclick="this.classList.toggle('open')">
+      <h4>🗺️ What did today's route look like?</h4>
+      <div class="rel-question">See all stops on a route, in order, with what was picked up and delivered at each one.</div>
+      <div class="rel-answer">
+        <div class="rel-path">
+          <span class="rel-node">logistics.routes</span>
+          <span class="rel-arrow">← route_id ←</span>
+          <span class="rel-node">logistics.stops</span>
+          <span class="rel-arrow">(ordered by stop_order)</span>
+        </div>
+        <div class="rel-path">
+          <span class="rel-node">logistics.stops</span>
+          <span class="rel-arrow">← stop_id ←</span>
+          <span class="rel-node">logistics.stop_items</span>
+          <span class="rel-arrow">→ order_id →</span>
+          <span class="rel-node">orders.orders</span>
+        </div>
+        <div class="rel-explain">Start from the route, get all stops in sequence order. Each stop points to a <code>location</code> so you see the place name, address, and any access notes. Then for each stop get the items to see which orders were handled. You can also join through to <code>core.pets</code> to see the pet names at each stop.</div>
+      </div>
+    </div>
+
+    <div class="rel-scenario" onclick="this.classList.toggle('open')">
+      <h4>🏥 What do we know about this location? Is it a partner?</h4>
+      <div class="rel-question">Look up a location's hours, access notes, contact info, and whether it's a partner vet — plus see every route that's ever visited it.</div>
+      <div class="rel-answer">
+        <div class="rel-path">
+          <span class="rel-node">logistics.locations</span>
+          <span class="rel-arrow">→ organization_id →</span>
+          <span class="rel-node">core.organizations</span>
+          <span class="rel-arrow">← organization_id ←</span>
+          <span class="rel-node">partners.profiles</span>
+        </div>
+        <div class="rel-path">
+          <span class="rel-node">logistics.locations</span>
+          <span class="rel-arrow">← location_id ←</span>
+          <span class="rel-node">logistics.stops</span>
+          <span class="rel-arrow">→ route_id →</span>
+          <span class="rel-node">logistics.routes</span>
+        </div>
+        <div class="rel-explain">The location itself has the name, address, hours, and access notes. If <code>organization_id</code> is set, the location is a known organization — and you can check <code>partners.profiles</code> to see if they're a partner and what tier they are. Following the stops backward shows every route that's ever visited this place.</div>
+        <div class="rel-compare">In Airtable: Location info wasn't tracked separately. Vet details lived on the Veterinarians table but weren't connected to delivery logistics.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- TAB 4: AIRTABLE MAP                        -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section" id="sec-airtable-map">
+
+  <h2>Where did my Airtable data go?</h2>
+  <p>Every Airtable table mapped to its new home in Supabase.</p>
+
+  <div style="margin:24px 0;">
+    <div class="mapping-row" style="background:var(--surface2);">
+      <div class="mapping-header">Airtable Table</div>
+      <div class="mapping-arrow"></div>
+      <div class="mapping-header">Supabase Location(s)</div>
+    </div>
+
+    <div class="mapping-row">
+      <div class="mapping-at">🐾 Pets <span style="font-size:11px;color:var(--text-dim);">(90+ fields)</span></div>
+      <div class="mapping-arrow">→</div>
+      <div class="mapping-sb">
+        <code>core.pets</code> + <code>orders.orders</code> + <code>orders.care_plans</code> + <code>orders.memorials</code>
+        <div class="mapping-note">The mega-table was split into its logical parts: the animal, the job, and the care details.</div>
+      </div>
+    </div>
+
+    <div class="mapping-row">
+      <div class="mapping-at">👤 Clients</div>
+      <div class="mapping-arrow">→</div>
+      <div class="mapping-sb">
+        <code>core.contacts</code> <span style="color:var(--text-dim);">(role = 'owner')</span> + <code>clients.portal_access</code> + <code>clients.reviews</code>
+        <div class="mapping-note">Person info goes to contacts. Portal and review tracking get their own tables.</div>
+      </div>
+    </div>
+
+    <div class="mapping-row">
+      <div class="mapping-at">🏥 Veterinarians</div>
+      <div class="mapping-arrow">→</div>
+      <div class="mapping-sb">
+        <code>core.organizations</code> + <code>partners.profiles</code>
+        <div class="mapping-note">Practice info in core, partnership details (tier, rates, portal) in partners.</div>
+      </div>
+    </div>
+
+    <div class="mapping-row">
+      <div class="mapping-at">🏥 Vet Partner Table</div>
+      <div class="mapping-arrow">→</div>
+      <div class="mapping-sb">
+        <code>partners.profiles</code>
+        <div class="mapping-note">Merged with Veterinarians. The portal-specific fields live here.</div>
+      </div>
+    </div>
+
+    <div class="mapping-row">
+      <div class="mapping-at">👤 App Users</div>
+      <div class="mapping-arrow">→</div>
+      <div class="mapping-sb">
+        <code>core.contacts</code> + <code>auth.users</code>
+        <div class="mapping-note">All user types are contacts. Supabase's built-in auth system handles login.</div>
+      </div>
+    </div>
+
+    <div class="mapping-row">
+      <div class="mapping-at">⚙️ Donatello</div>
+      <div class="mapping-arrow">→</div>
+      <div class="mapping-sb">
+        <code>operations.machines</code> + <code>operations.runs</code> + <code>operations.run_pets</code>
+        <div class="mapping-note">All three machine tables become rows in one model. Donatello is a row in machines.</div>
+      </div>
+    </div>
+
+    <div class="mapping-row">
+      <div class="mapping-at">⚙️ Michelangelo</div>
+      <div class="mapping-arrow">→</div>
+      <div class="mapping-sb">
+        Same → <code>operations.machines</code> / <code>runs</code> / <code>run_pets</code>
+        <div class="mapping-note">Another row in the same machines table.</div>
+      </div>
+    </div>
+
+    <div class="mapping-row">
+      <div class="mapping-at">⚙️ Leonardo</div>
+      <div class="mapping-arrow">→</div>
+      <div class="mapping-sb">
+        Same → <code>operations.machines</code> / <code>runs</code> / <code>run_pets</code>
+        <div class="mapping-note">Same pattern. If you add a 4th machine, it's just another row — no new table needed.</div>
+      </div>
+    </div>
+
+    <div class="mapping-row">
+      <div class="mapping-at">💰 QBO Invoices</div>
+      <div class="mapping-arrow">→</div>
+      <div class="mapping-sb">
+        <code>billing.invoices</code>
+        <div class="mapping-note">Invoice headers with all QBO sync fields preserved.</div>
+      </div>
+    </div>
+
+    <div class="mapping-row">
+      <div class="mapping-at">📝 QBO Invoice Table</div>
+      <div class="mapping-arrow">→</div>
+      <div class="mapping-sb">
+        <code>billing.invoice_line_items</code>
+        <div class="mapping-note">Line-item detail for each invoice.</div>
+      </div>
+    </div>
+
+    <div class="mapping-row">
+      <div class="mapping-at">📦 QBO Products</div>
+      <div class="mapping-arrow">→</div>
+      <div class="mapping-sb">
+        <code>pricing.products</code>
+        <div class="mapping-note">Product/service catalog with SKUs and QBO account mapping.</div>
+      </div>
+    </div>
+
+    <div class="mapping-row" style="border: 1px solid var(--lime); border-left: 3px solid var(--lime);">
+      <div class="mapping-at" style="background:var(--lime-dim);">🚐 <em>Not in Airtable</em></div>
+      <div class="mapping-arrow">→</div>
+      <div class="mapping-sb">
+        <code>logistics.locations</code> + <code>logistics.routes</code> + <code>logistics.stops</code> + <code>logistics.stop_items</code>
+        <div class="mapping-note">Brand new! A directory of places you visit (with hours and access notes), plus route-level tracking for pickups and deliveries — driver, stops in order, which pets at each stop, and timestamps.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="concept-card full" style="background:var(--surface); margin-top:24px;">
+    <h3>What about fields that didn't migrate?</h3>
+    <p style="margin-top:8px;">Some Airtable fields were artifacts of workarounds and integrations that aren't needed in Supabase:</p>
+    <div style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:13px;">
+      <div><span style="color:var(--red);">✗</span> <span style="color:var(--text-dim);">Trello IDs</span> — replaced by workflows schema</div>
+      <div><span style="color:var(--red);">✗</span> <span style="color:var(--text-dim);">"Copy" fields</span> — Airtable sync artifacts</div>
+      <div><span style="color:var(--red);">✗</span> <span style="color:var(--text-dim);">Adalo fields</span> — replaced by Supabase auth</div>
+      <div><span style="color:var(--red);">✗</span> <span style="color:var(--text-dim);">Zapier triggers</span> — replaced by Edge Functions</div>
+      <div><span style="color:var(--red);">✗</span> <span style="color:var(--text-dim);">Lookup fields</span> — Postgres uses JOINs instead</div>
+      <div><span style="color:var(--red);">✗</span> <span style="color:var(--text-dim);">Formula display fields</span> — computed at query time</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- TAB 5: GLOSSARY                            -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section" id="sec-glossary">
+
+  <h2>Database terms, translated</h2>
+  <p>Every Supabase/Postgres concept mapped to what you already know from Airtable.</p>
+
+  <div style="margin-top:16px;">
+
+    <div class="glossary-item">
+      <div class="glossary-term">Schema</div>
+      <div class="glossary-airtable">Airtable equivalent: Separate bases (but all connected)</div>
+      <div class="glossary-def">A named folder inside your database that groups related tables. You have 8: core, orders, operations, billing, pricing, workflows, partners, clients. Unlike separate Airtable bases, schemas can reference each other freely.</div>
+    </div>
+
+    <div class="glossary-item">
+      <div class="glossary-term">Table</div>
+      <div class="glossary-airtable">Airtable equivalent: A table (same thing!)</div>
+      <div class="glossary-def">A collection of rows with defined columns. Exactly like an Airtable table — the concept is identical.</div>
+    </div>
+
+    <div class="glossary-item">
+      <div class="glossary-term">Row / Record</div>
+      <div class="glossary-airtable">Airtable equivalent: A row / record (same thing!)</div>
+      <div class="glossary-def">One entry in a table. A single pet, a single order, a single invoice.</div>
+    </div>
+
+    <div class="glossary-item">
+      <div class="glossary-term">Column / Field</div>
+      <div class="glossary-airtable">Airtable equivalent: A field (same thing!)</div>
+      <div class="glossary-def">A named piece of data on every row — like "name", "status", or "weight_lbs".</div>
+    </div>
+
+    <div class="glossary-item">
+      <div class="glossary-term">Primary Key (PK)</div>
+      <div class="glossary-airtable">Airtable equivalent: The hidden record ID that Airtable auto-generates</div>
+      <div class="glossary-def">Every row gets a unique ID (a UUID like <code style="font-family:var(--mono);font-size:12px;">a1b2c3d4-...</code>). This is how other tables point to it. In Airtable you don't see this — in Supabase it's the <code style="font-family:var(--mono);font-size:12px;">id</code> column.</div>
+    </div>
+
+    <div class="glossary-item">
+      <div class="glossary-term">Foreign Key (FK)</div>
+      <div class="glossary-airtable">Airtable equivalent: A linked record field</div>
+      <div class="glossary-def">A column that stores another record's ID to create a relationship. When you see <code style="font-family:var(--mono);font-size:12px;">owner_id</code> on the pets table, it holds the ID of a record in the contacts table. Same as clicking a linked record chip in Airtable.</div>
+    </div>
+
+    <div class="glossary-item">
+      <div class="glossary-term">JOIN</div>
+      <div class="glossary-airtable">Airtable equivalent: Lookup fields + expanding a linked record</div>
+      <div class="glossary-def">When you want to see a pet AND its owner info together, you JOIN the two tables. It's like Airtable automatically showing you the linked record's details — except you explicitly ask for it. The app layer handles this for you.</div>
+    </div>
+
+    <div class="glossary-item">
+      <div class="glossary-term">Junction Table</div>
+      <div class="glossary-airtable">Airtable equivalent: A many-to-many linked record (Airtable hides the junction)</div>
+      <div class="glossary-def">When two things have a many-to-many relationship (like runs and orders — a run can have multiple pets, and an order could be in multiple runs), you need a table in the middle. That's <code style="font-family:var(--mono);font-size:12px;">run_pets</code>. Airtable creates this invisibly; in Postgres it's explicit.</div>
+    </div>
+
+    <div class="glossary-item">
+      <div class="glossary-term">RLS (Row Level Security)</div>
+      <div class="glossary-airtable">Airtable equivalent: Sharing permissions / views per collaborator</div>
+      <div class="glossary-def">Rules that control who can see which rows. A vet partner can only see their own orders. A client can only see their own pet's status. In Airtable you'd manage this with views and sharing. In Supabase it's enforced at the database level — much more secure.</div>
+    </div>
+
+    <div class="glossary-item">
+      <div class="glossary-term">UUID</div>
+      <div class="glossary-airtable">Airtable equivalent: Record IDs like "rec7z3H..."</div>
+      <div class="glossary-def">A universally unique identifier — a long string like <code style="font-family:var(--mono);font-size:12px;">a1b2c3d4-e5f6-7890-abcd-ef1234567890</code>. Every record gets one. Like Airtable's record IDs but in a standard format.</div>
+    </div>
+
+    <div class="glossary-item">
+      <div class="glossary-term">Normalization</div>
+      <div class="glossary-airtable">Airtable equivalent: No real equivalent — Airtable encourages mega-tables</div>
+      <div class="glossary-def">The practice of splitting data into focused tables instead of jamming everything into one. Your Pets mega-table becoming pets + orders + care_plans is normalization. It reduces duplication and makes data cleaner, but means more tables to navigate.</div>
+    </div>
+
+    <div class="glossary-item">
+      <div class="glossary-term">Edge Function</div>
+      <div class="glossary-airtable">Airtable equivalent: Airtable Automations / Zapier integrations</div>
+      <div class="glossary-def">Code that runs on Supabase's servers when something happens (like a new order being created). Replaces those Zapier triggers and checkbox-based automations you had in Airtable.</div>
+    </div>
+
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<script>
+function showTab(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('sec-' + id).classList.add('active');
+  event.target.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function selectSchema(name) {
+  document.querySelectorAll('.schema-detail').forEach(d => d.classList.remove('visible'));
+  document.querySelectorAll('.schema-box').forEach(b => b.classList.remove('selected'));
+  const detail = document.getElementById('detail-' + name);
+  const box = event.currentTarget;
+  if (detail) { detail.classList.add('visible'); box.classList.add('selected'); detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+}
+</script>
+</body>
+</html>

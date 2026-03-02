@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Companah — Migration Tool (v5)</title>
+<style>
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --surface2: #252836;
+    --border: #2e3144; --text: #e4e6f0; --text2: #8b8fa3;
+    --accent: #6c5ce7; --accent2: #a29bfe; --green: #00b894;
+    --orange: #fdcb6e; --red: #e17055; --blue: #74b9ff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .topbar h1 { font-size: 18px; } .topbar h1 span { color: var(--accent2); font-weight: 400; }
+  .topbar .version { background: var(--green); color: #000; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-left: 8px; }
+  .topbar a { color: var(--text2); text-decoration: none; font-size: 13px; } .topbar a:hover { color: var(--accent2); }
+
+  .main { max-width: 960px; margin: 0 auto; padding: 32px 20px; }
+
+  .steps { display: flex; gap: 4px; margin-bottom: 32px; }
+  .step { flex: 1; text-align: center; padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; font-size: 13px; color: var(--text2); }
+  .step.active { border-color: var(--accent); color: var(--accent2); font-weight: 600; }
+  .step.done { border-color: var(--green); color: var(--green); }
+  .step .num { display: block; font-size: 18px; font-weight: 700; margin-bottom: 2px; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+  .card h3 { font-size: 16px; margin-bottom: 12px; }
+  .card p.sub { color: var(--text2); font-size: 13px; margin-bottom: 16px; }
+  .card label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 4px; margin-top: 12px; }
+  .card input { width: 100%; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 14px; }
+  .card input:focus { outline: none; border-color: var(--accent); }
+  .card select { width: 100%; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 14px; }
+
+  .btn { padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 600; }
+  .btn-primary { background: var(--accent); color: white; } .btn-primary:hover { background: var(--accent2); }
+  .btn-green { background: var(--green); color: white; } .btn-green:hover { opacity: 0.9; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border) !important; }
+  .btn-red { background: var(--red); color: white; }
+  .btn:disabled { opacity: 0.5; cursor: default; }
+  .btn-row { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+
+  .mig-table { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--surface2); border-radius: 8px; margin-bottom: 8px; }
+  .mig-table input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+  .mig-table .info { flex: 1; }
+  .mig-table .name { font-weight: 600; font-size: 14px; }
+  .mig-table .dest { color: var(--text2); font-size: 12px; }
+  .mig-table .count { color: var(--blue); font-size: 13px; font-weight: 500; }
+
+  .progress-bar { width: 100%; height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; margin: 12px 0; }
+  .progress-fill { height: 100%; background: var(--green); border-radius: 4px; transition: width 0.3s; }
+
+  .log { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; max-height: 500px; overflow-y: auto; font-family: 'SF Mono', monospace; font-size: 12px; line-height: 1.8; }
+  .log .info { color: var(--blue); }
+  .log .success { color: var(--green); }
+  .log .error { color: var(--red); }
+  .log .warn { color: var(--orange); }
+
+  .hidden { display: none; }
+
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .summary-item { background: var(--surface2); border-radius: 8px; padding: 14px; }
+  .summary-item .label { color: var(--text2); font-size: 12px; }
+  .summary-item .value { font-size: 20px; font-weight: 700; margin-top: 4px; }
+
+  .schema-note { background: var(--surface2); border-left: 3px solid var(--accent); padding: 12px 16px; border-radius: 0 8px 8px 0; margin-bottom: 16px; font-size: 13px; color: var(--text2); }
+  .schema-note strong { color: var(--text); }
+
+  .detail-row { display: grid; grid-template-columns: 200px 1fr; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .detail-row .lbl { color: var(--text2); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>Migration <span>Tool</span> <span class="version">v5</span></h1>
+  <a href="index.html">← Dashboard</a>
+</div>
+
+<div class="main">
+  <div class="steps">
+    <div class="step active" id="step1"><span class="num">1</span>Connect</div>
+    <div class="step" id="step2"><span class="num">2</span>Schema</div>
+    <div class="step" id="step3"><span class="num">3</span>Migrate</div>
+    <div class="step" id="step4"><span class="num">4</span>Summary</div>
+  </div>
+
+  <!-- Step 1: Connect -->
+  <div id="view1">
+    <div class="card">
+      <h3>Airtable Connection</h3>
+      <label>API Token</label>
+      <input type="password" id="atToken" placeholder="pat..." />
+      <label>Base ID</label>
+      <input type="text" id="atBase" value="appZTdVvmWZyVgIfA" />
+    </div>
+    <div class="card">
+      <h3>Supabase Connection</h3>
+      <label>Project URL</label>
+      <input type="text" id="sbUrl" value="https://qrnjwdbqzeqtcyzwljvu.supabase.co" />
+      <label>Service Role Key</label>
+      <input type="password" id="sbKey" placeholder="eyJhbG..." />
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="testConnections()">Test Connections & Continue →</button>
+    </div>
+    <div id="connResult" style="margin-top:12px;font-size:13px;"></div>
+  </div>
+
+  <!-- Step 2: Schema + Table Selection -->
+  <div id="view2" class="hidden">
+    <div class="card">
+      <h3>Deploy Schema First</h3>
+      <div class="schema-note">
+        <strong>Important:</strong> Before migrating data, you need the v5 schema deployed in Supabase.
+        If you haven't done this yet, paste the contents of <code>companah-supabase-migration-v5.sql</code> into the Supabase SQL Editor and run it.
+      </div>
+      <label>Schema Status</label>
+      <div id="schemaStatus" style="margin-top:8px;font-size:13px;color:var(--text2);">Checking...</div>
+      <div class="btn-row" style="margin-top:12px;">
+        <button class="btn btn-secondary" onclick="checkSchema()">Check Schema</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Select Tables to Migrate</h3>
+      <p class="sub">Each Airtable table maps to one or more Supabase tables. Tables will be migrated in dependency order with proper ID linking.</p>
+      <div id="tableList"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="goStep(1)">← Back</button>
+      <button class="btn btn-green" onclick="startMigration()">Start Migration →</button>
+    </div>
+  </div>
+
+  <!-- Step 3: Migrate -->
+  <div id="view3" class="hidden">
+    <div class="card">
+      <h3>Migration Progress</h3>
+      <div id="currentTask" style="color:var(--text2);font-size:14px;margin-bottom:8px;">Preparing...</div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      <div id="progressText" style="font-size:13px;color:var(--text2);margin-bottom:16px;">0%</div>
+      <div class="log" id="migLog"></div>
+    </div>
+    <div class="btn-row" id="migActions" class="hidden">
+      <button class="btn btn-secondary" onclick="goStep(4)">View Summary →</button>
+    </div>
+  </div>
+
+  <!-- Step 4: Summary -->
+  <div id="view4" class="hidden">
+    <div class="card">
+      <h3>Migration Complete</h3>
+      <div class="summary-grid" id="summaryGrid"></div>
+    </div>
+    <div class="card">
+      <h3>Migration Details</h3>
+      <div id="summaryDetails"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="location.href='companah-data-manager.html'">Open Data Manager →</button>
+      <button class="btn btn-primary" onclick="location.href='index.html'">Back to Dashboard</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// GLOBALS
+// ════════════════════════════════════════════════════════════
+let AT_TOKEN = '', AT_BASE = '', SB_URL = '', SB_KEY = '';
+let airtableTables = [];
+let migrationStats = { tables: 0, records: 0, errors: 0, skipped: 0, details: [] };
+
+// ── ID MAPPING ──
+// This is the key to maintaining relationships.
+// Maps: airtable record ID → supabase UUID
+const idMap = {
+  orgs: {},      // vet airtable ID → org UUID
+  contacts: {},  // client/user airtable ID → contact UUID
+  pets: {},      // pet airtable ID → pet UUID
+  orders: {},    // pet airtable ID → order UUID (1:1 with pets in Airtable)
+  carePlans: {}, // pet airtable ID → care_plan UUID
+  invoices: {},  // invoice airtable ID → invoice UUID
+  profiles: {},  // vet airtable ID → partner profile UUID
+  machines: {},  // machine name → machine UUID
+};
+
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
+function ensureUUID(map, airtableId) {
+  if (!map[airtableId]) map[airtableId] = generateUUID();
+  return map[airtableId];
+}
+
+// ── Migration phases (order matters for foreign keys) ──
+const MIGRATION_PHASES = [
+  {
+    name: 'Veterinarians → Organizations + Partner Profiles',
+    atTable: 'Veterinarians',
+    phase: 'vets',
+    checked: true
+  },
+  {
+    name: 'Vet Partner Table → Update Profiles',
+    atTable: 'Vet Partner Table',
+    phase: 'vetPartners',
+    checked: true
+  },
+  {
+    name: 'Clients → Contacts (owners)',
+    atTable: 'Clients',
+    phase: 'clients',
+    checked: true
+  },
+  {
+    name: 'App Users → Contacts (team)',
+    atTable: 'App Users',
+    phase: 'appUsers',
+    checked: true
+  },
+  {
+    name: 'Pets → Pets + Orders + Care Plans',
+    atTable: 'Pets',
+    phase: 'pets',
+    checked: true
+  },
+  {
+    name: 'Donatello → Runs + Run Pets',
+    atTable: 'Donatello',
+    phase: 'runs',
+    machine: 'Donatello',
+    checked: true
+  },
+  {
+    name: 'Michelangelo → Runs + Run Pets',
+    atTable: 'Michelangelo',
+    phase: 'runs',
+    machine: 'Michelangelo',
+    checked: true
+  },
+  {
+    name: 'Leonardo → Runs + Run Pets',
+    atTable: 'Leonardo',
+    phase: 'runs',
+    machine: 'Leonardo',
+    checked: true
+  },
+  {
+    name: 'QBO Invoices → Invoices',
+    atTable: 'QBO Invoices',
+    phase: 'invoices',
+    checked: true
+  },
+];
+
+// ── STATUS + VALUE MAPPINGS ──
+const STATUS_MAP = {
+  'Pre-planning / Inquiry': 'preplanning',
+  'On Hold': 'on_hold',
+  'Awaiting Pickup': 'awaiting_pickup',
+  'Received': 'received',
+  'Triage': 'triage',
+  'Cremation - 550': 'cremation',
+  'Cremation - 400': 'cremation',
+  'Cremation - Donatello': 'cremation',
+  'Preparing Remains': 'complete',
+  'Building Memorials': 'complete',
+  'Closed': 'delivered',
+  'Complete': 'complete',
+  'Delivered': 'delivered',
+};
+
+const SERVICE_MAP = {
+  'Private': 'private',
+  'Communal': 'communal',
+  'Communal Cremation': 'communal',
+  'Semi-Private': 'semi_private',
+  'Memorials Only': 'memorials_only',
+  'Biodegradable': 'biodegradable',
+  'Biodegradeable': 'biodegradable',
+  'Individual-CMDF': 'private',
+  'Private Cherry MDF': 'private',
+  'Individual-WLM': 'private',
+  'Option A': 'private',
+};
+
+const REGION_MAP = {
+  'Central NC Region': 'Central NC',
+  'Central Region': 'Central NC',
+  'Central': 'Central NC',
+  'Sandhills Region': 'Sandhills',
+  'Sandhills': 'Sandhills',
+  'Piedmont Region': 'Piedmont',
+};
+
+const TERMS_MAP = {
+  'On receipt': 'on_receipt',
+  'Due on receipt': 'on_receipt',
+  'Net 30': 'net_30',
+  'Net 60': 'net_60',
+};
+
+function mapSpecies(raw) {
+  if (!raw) return 'other';
+  const s = raw.toLowerCase().trim();
+  if (s.includes('dog') || s.includes('canine')) return 'dog';
+  if (s.includes('cat') || s.includes('feline')) return 'cat';
+  if (s.includes('bird')) return 'bird';
+  if (s.includes('rabbit') || s.includes('bunny')) return 'rabbit';
+  if (s.includes('hamster')) return 'hamster';
+  if (s.includes('guinea')) return 'guinea_pig';
+  if (s.includes('reptile') || s.includes('lizard') || s.includes('turtle') || s.includes('snake')) return 'reptile';
+  return 'other';
+}
+
+function mapDelivery(raw) {
+  if (!raw) return null;
+  const d = raw.toLowerCase();
+  if (d.includes('primary care')) return 'primary_care';
+  if (d.includes('other vet')) return 'other_vet';
+  if (d.includes('direct to owner')) return 'direct_to_owner';
+  if (d.includes('pick up') || d.includes('pickup')) return 'owner_pickup';
+  return null;
+}
+
+function mapGender(raw) {
+  if (!raw || typeof raw !== 'string') return null;
+  const g = raw.toLowerCase().trim();
+  if (g === 'male') return 'male';
+  if (g === 'female') return 'female';
+  if (g.includes('female')) return 'female';
+  if (g.includes('male')) return 'male';
+  return null;
+}
+
+// ════════════════════════════════════════════════════════════
+// UI FUNCTIONS
+// ════════════════════════════════════════════════════════════
+
+const params = new URLSearchParams(window.location.search);
+if (params.get('url')) document.getElementById('sbUrl').value = params.get('url');
+if (params.get('key')) document.getElementById('sbKey').value = params.get('key');
+
+function goStep(n) {
+  [1,2,3,4].forEach(i => {
+    document.getElementById(`view${i}`).classList.toggle('hidden', i !== n);
+    const step = document.getElementById(`step${i}`);
+    step.classList.remove('active', 'done');
+    if (i < n) step.classList.add('done');
+    if (i === n) step.classList.add('active');
+  });
+}
+
+function log(msg, type = 'info') {
+  const el = document.getElementById('migLog');
+  const time = new Date().toLocaleTimeString();
+  el.innerHTML += `<div class="${type}">[${time}] ${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function setProgress(pct, task) {
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = Math.round(pct) + '%';
+  if (task) document.getElementById('currentTask').textContent = task;
+}
+
+// ════════════════════════════════════════════════════════════
+// CONNECTION + SCHEMA CHECK
+// ════════════════════════════════════════════════════════════
+
+async function testConnections() {
+  AT_TOKEN = document.getElementById('atToken').value.trim();
+  AT_BASE = document.getElementById('atBase').value.trim();
+  SB_URL = document.getElementById('sbUrl').value.trim().replace(/\/$/, '');
+  SB_KEY = document.getElementById('sbKey').value.trim();
+
+  const result = document.getElementById('connResult');
+  result.innerHTML = '<span style="color:var(--text2)">Testing connections...</span>';
+
+  // Test Airtable
+  try {
+    const atRes = await fetch(`https://api.airtable.com/v0/meta/bases/${AT_BASE}/tables`, {
+      headers: { 'Authorization': `Bearer ${AT_TOKEN}` }
+    });
+    if (!atRes.ok) throw new Error(`HTTP ${atRes.status}`);
+    const atData = await atRes.json();
+    airtableTables = atData.tables || [];
+  } catch(e) {
+    result.innerHTML = `<span style="color:var(--red)">Airtable failed: ${e.message}</span>`;
+    return;
+  }
+
+  // Test Supabase
+  try {
+    const sbRes = await fetch(`${SB_URL}/rest/v1/`, {
+      headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
+    });
+    if (!sbRes.ok) throw new Error(`HTTP ${sbRes.status}`);
+  } catch(e) {
+    result.innerHTML = `<span style="color:var(--red)">Supabase failed: ${e.message}</span>`;
+    return;
+  }
+
+  result.innerHTML = `<span style="color:var(--green)">✓ Both connected — Airtable: ${airtableTables.length} tables</span>`;
+  buildTableList();
+  checkSchema();
+  setTimeout(() => goStep(2), 500);
+}
+
+async function checkSchema() {
+  const el = document.getElementById('schemaStatus');
+  try {
+    // Try to query core.organizations to see if schema exists
+    const res = await fetch(`${SB_URL}/rest/v1/organizations?limit=0`, {
+      headers: {
+        'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`,
+        'Accept-Profile': 'core'
+      }
+    });
+    if (res.ok) {
+      // Check for v5 fields (care_type on orders)
+      const ordRes = await fetch(`${SB_URL}/rest/v1/orders?limit=1&select=care_type`, {
+        headers: {
+          'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`,
+          'Accept-Profile': 'orders'
+        }
+      });
+      if (ordRes.ok) {
+        el.innerHTML = '<span style="color:var(--green)">✓ v5 schema detected — ready to migrate</span>';
+      } else {
+        el.innerHTML = '<span style="color:var(--orange)">⚠ Schema exists but may be v4. Please deploy v5 SQL first.</span>';
+      }
+    } else {
+      el.innerHTML = '<span style="color:var(--red)">✗ Schema not found. Deploy companah-supabase-migration-v5.sql first.</span>';
+    }
+
+    // Also fetch machine IDs for later use
+    const machRes = await fetch(`${SB_URL}/rest/v1/machines?select=id,name`, {
+      headers: {
+        'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`,
+        'Accept-Profile': 'operations'
+      }
+    });
+    if (machRes.ok) {
+      const machines = await machRes.json();
+      machines.forEach(m => { idMap.machines[m.name] = m.id; });
+    }
+  } catch(e) {
+    el.innerHTML = `<span style="color:var(--red)">Error checking: ${e.message}</span>`;
+  }
+}
+
+function buildTableList() {
+  const list = document.getElementById('tableList');
+  list.innerHTML = MIGRATION_PHASES.map((m, i) => {
+    const atTable = airtableTables.find(t => t.name === m.atTable);
+    const fieldCount = atTable ? atTable.fields.length : '?';
+    return `<div class="mig-table">
+      <input type="checkbox" id="mig-${i}" ${m.checked ? 'checked' : ''} />
+      <div class="info">
+        <div class="name">${m.name}</div>
+        <div class="dest">Source: ${m.atTable} (${fieldCount} fields)</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════
+// AIRTABLE FETCH
+// ════════════════════════════════════════════════════════════
+
+async function fetchAllRecords(tableNameOrId) {
+  const records = [];
+  let offset = null;
+  let page = 0;
+  do {
+    page++;
+    let url = `https://api.airtable.com/v0/${AT_BASE}/${encodeURIComponent(tableNameOrId)}?pageSize=100`;
+    if (offset) url += `&offset=${offset}`;
+    const res = await fetch(url, { headers: { 'Authorization': `Bearer ${AT_TOKEN}` }});
+    if (!res.ok) throw new Error(`Airtable HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.records) records.push(...data.records);
+    offset = data.offset || null;
+    if (page % 5 === 0) log(`  ... ${records.length} records fetched`);
+  } while (offset);
+  return records;
+}
+
+// ════════════════════════════════════════════════════════════
+// SUPABASE INSERT (with upsert/conflict handling)
+// ════════════════════════════════════════════════════════════
+
+async function sbUpsert(schema, table, records) {
+  if (!records.length) return { inserted: 0, errors: 0 };
+  let inserted = 0, errors = 0;
+
+  for (let i = 0; i < records.length; i += 50) {
+    const chunk = records.slice(i, i + 50);
+    try {
+      const res = await fetch(`${SB_URL}/rest/v1/${table}`, {
+        method: 'POST',
+        headers: {
+          'apikey': SB_KEY,
+          'Authorization': `Bearer ${SB_KEY}`,
+          'Content-Profile': schema,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal,resolution=merge-duplicates'
+        },
+        body: JSON.stringify(chunk)
+      });
+      if (res.ok) {
+        inserted += chunk.length;
+      } else {
+        const errData = await res.text();
+        log(`  ERROR ${schema}.${table}: ${errData}`, 'error');
+        errors += chunk.length;
+      }
+    } catch(e) {
+      log(`  Network error ${schema}.${table}: ${e.message}`, 'error');
+      errors += chunk.length;
+    }
+  }
+  return { inserted, errors };
+}
+
+// ════════════════════════════════════════════════════════════
+// PHASE PROCESSORS
+// ════════════════════════════════════════════════════════════
+
+async function migrateVets(records) {
+  const orgs = [];
+  const profiles = [];
+
+  for (const rec of records) {
+    const f = rec.fields;
+    const orgId = ensureUUID(idMap.orgs, rec.id);
+    const profileId = ensureUUID(idMap.profiles, rec.id);
+
+    const name = f['Practice'] || f['Practice Name'] || '';
+    if (!name) continue;
+
+    orgs.push({
+      id: orgId,
+      name: name,
+      type: 'vet_partner',
+      abbreviation: f['Vet ID'] || null,
+      phone: f['Phone'] || null,
+      email: f['Email'] || null,
+      address_line_1: f['Address'] || null,
+      city: f['City'] || null,
+      state: f['State'] || null,
+      zip: f['Zip'] || null,
+      region: REGION_MAP[f['Region']] || f['Region'] || null,
+      notes: f['General notes'] || null,
+    });
+
+    profiles.push({
+      id: profileId,
+      organization_id: orgId,
+      partner_code: f['Vet ID'] || null,
+      wholesale_rate_individual: f['Wholesale Rate - Individual'] || null,
+      wholesale_rate_communal: f['Wholesale Rate - Communal'] || null,
+      qbo_customer_id: f['QBO Customer ID'] || null,
+      qbo_current_invoice_id: f['QBO Current Invoice ID'] || null,
+      magic_link_url: f['Magic Link'] || null,
+      user_type: 'vet',
+    });
+  }
+
+  log(`  Inserting ${orgs.length} organizations...`);
+  const orgResult = await sbUpsert('core', 'organizations', orgs);
+
+  log(`  Inserting ${profiles.length} partner profiles...`);
+  const profResult = await sbUpsert('partners', 'profiles', profiles);
+
+  return {
+    name: 'Veterinarians',
+    destinations: [
+      { table: 'core.organizations', ...orgResult },
+      { table: 'partners.profiles', ...profResult },
+    ]
+  };
+}
+
+async function migrateVetPartners(records) {
+  // Update existing profiles with extra data (rating, user_type, vet_abbr)
+  const updates = [];
+
+  for (const rec of records) {
+    const f = rec.fields;
+
+    // If this vet wasn't in the Veterinarians table, create org + profile
+    if (!idMap.orgs[rec.id]) {
+      const orgId = ensureUUID(idMap.orgs, rec.id);
+      const profileId = ensureUUID(idMap.profiles, rec.id);
+      const name = f['Practice'] || '';
+      if (!name) continue;
+
+      updates.push({
+        type: 'new',
+        org: {
+          id: orgId, name, type: 'vet_partner',
+          phone: f['Phone'] || null, email: f['Email'] || null,
+          address_line_1: f['Address'] || null, city: f['City'] || null,
+          state: f['State'] || null, zip: f['Zip'] || null,
+          region: REGION_MAP[f['Region']] || f['Region'] || null,
+        },
+        profile: {
+          id: profileId, organization_id: orgId,
+          partner_code: f['Vet Abbr'] || null,
+          wholesale_rate_individual: f['Wholesale Rate - Individual'] || null,
+          wholesale_rate_communal: f['Wholesale Rate - Communal'] || null,
+          magic_link_url: f['Magic Link'] || null,
+          rating: f['Rating'] || null,
+          user_type: f['User Type'] === 'Owner' ? 'owner' : 'vet',
+        }
+      });
+    } else {
+      // Update existing profile with Vet Partner Table extras
+      const profileId = idMap.profiles[rec.id];
+      if (profileId && (f['Rating'] || f['Vet Abbr'] || f['User Type'])) {
+        updates.push({
+          type: 'update',
+          profileId,
+          data: {
+            rating: f['Rating'] || null,
+            partner_code: f['Vet Abbr'] || null,
+            user_type: f['User Type'] === 'Owner' ? 'owner' : 'vet',
+          }
+        });
+      }
+    }
+  }
+
+  // Process new orgs
+  const newOrgs = updates.filter(u => u.type === 'new').map(u => u.org);
+  const newProfiles = updates.filter(u => u.type === 'new').map(u => u.profile);
+
+  let orgResult = { inserted: 0, errors: 0 };
+  let profResult = { inserted: 0, errors: 0 };
+
+  if (newOrgs.length) {
+    log(`  Inserting ${newOrgs.length} new orgs from Vet Partner Table...`);
+    orgResult = await sbUpsert('core', 'organizations', newOrgs);
+  }
+  if (newProfiles.length) {
+    profResult = await sbUpsert('partners', 'profiles', newProfiles);
+  }
+
+  // Process updates
+  const updRecs = updates.filter(u => u.type === 'update');
+  let updated = 0;
+  for (const u of updRecs) {
+    try {
+      const res = await fetch(`${SB_URL}/rest/v1/profiles?id=eq.${u.profileId}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`,
+          'Content-Profile': 'partners', 'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(u.data)
+      });
+      if (res.ok) updated++;
+    } catch(e) { /* skip */ }
+  }
+
+  return {
+    name: 'Vet Partner Table',
+    destinations: [
+      { table: 'core.organizations', inserted: orgResult.inserted, errors: orgResult.errors },
+      { table: 'partners.profiles', inserted: profResult.inserted + updated, errors: profResult.errors },
+    ]
+  };
+}
+
+async function migrateClients(records) {
+  const contacts = [];
+
+  for (const rec of records) {
+    const f = rec.fields;
+    const contactId = ensureUUID(idMap.contacts, rec.id);
+
+    const first = f['First'] || '';
+    const last = f['Last'] || '';
+    if (!first && !last) continue;
+
+    contacts.push({
+      id: contactId,
+      first_name: first || null,
+      last_name: last || null,
+      email: f['Email'] || null,
+      phone: f['Phone'] || null,
+      address_line_1: f['Address'] || null,
+      address_line_2: f['Address 2'] || null,
+      city: f['City'] || null,
+      state: f['State'] || null,
+      zip: f['Zip'] || null,
+      role: 'owner',
+      region: REGION_MAP[f['Region']] || f['Region'] || null,
+    });
+  }
+
+  log(`  Inserting ${contacts.length} contacts (owners)...`);
+  const result = await sbUpsert('core', 'contacts', contacts);
+  return { name: 'Clients', destinations: [{ table: 'core.contacts', ...result }] };
+}
+
+async function migrateAppUsers(records) {
+  const contacts = [];
+
+  for (const rec of records) {
+    const f = rec.fields;
+    const contactId = ensureUUID(idMap.contacts, rec.id);
+
+    const first = f['First Name'] || '';
+    const last = f['Last Name'] || '';
+    if (!first && !last) continue;
+
+    // Link to vet org if applicable
+    let orgId = null;
+    const vetLinks = f['Vet Practice'] || [];
+    if (vetLinks.length > 0) orgId = idMap.orgs[vetLinks[0]] || null;
+
+    // Role from User Type
+    const types = f['User Type'] || [];
+    let role = 'team_member';
+    if (types.includes && types.includes('Vet')) role = 'vet_staff';
+    else if (types.includes && types.includes('Admin')) role = 'admin';
+
+    contacts.push({
+      id: contactId,
+      organization_id: orgId,
+      first_name: first || null,
+      last_name: last || null,
+      email: f['Email'] || null,
+      role: role,
+    });
+  }
+
+  log(`  Inserting ${contacts.length} contacts (team/users)...`);
+  const result = await sbUpsert('core', 'contacts', contacts);
+  return { name: 'App Users', destinations: [{ table: 'core.contacts', ...result }] };
+}
+
+async function migratePets(records) {
+  const pets = [];
+  const orders = [];
+  const carePlans = [];
+
+  for (const rec of records) {
+    const f = rec.fields;
+    const petId = ensureUUID(idMap.pets, rec.id);
+    const orderId = ensureUUID(idMap.orders, rec.id);
+
+    const petName = f['First Name'] || f['Pet Name'] || '';
+    if (!petName) continue;
+
+    // Owner contact
+    let ownerContactId = null;
+    const linkedClients = f['Linked Client'] || [];
+    if (linkedClients.length > 0) ownerContactId = idMap.contacts[linkedClients[0]] || null;
+
+    // Vet org
+    let partnerOrgId = null;
+    const linkedVets = f['Veterinarians'] || [];
+    if (linkedVets.length > 0) partnerOrgId = idMap.orgs[linkedVets[0]] || null;
+    // Also check "Veterinarians copy" link
+    if (!partnerOrgId) {
+      const linkedVets2 = f['Veterinarians copy'] || [];
+      if (Array.isArray(linkedVets2) && linkedVets2.length > 0) {
+        partnerOrgId = idMap.orgs[linkedVets2[0]] || null;
+      }
+    }
+
+    const species = mapSpecies(f['Species']);
+    const isPocketPet = ['rabbit','hamster','guinea_pig'].includes(species) ||
+                        (f['Weight'] && parseFloat(f['Weight']) < 5);
+
+    // ── PET ──
+    pets.push({
+      id: petId,
+      owner_id: ownerContactId,
+      name: petName,
+      species: species,
+      breed: f['Breed'] || null,
+      color: f['Color'] || null,
+      gender: mapGender(f['Gender']),
+      weight_lbs: f['Weight'] || null,
+      is_pocket_pet: isPocketPet || false,
+      date_of_passing: f['Date Received'] || null,
+      special_instructions: f['Notes'] || null,
+    });
+
+    // ── ORDER ──
+    const isVet = f['Vet?'] || false;
+    const careType = (isVet && partnerOrgId) ? 'partner' : 'direct';
+    const statusRaw = f['Status'] || '';
+    const status = STATUS_MAP[statusRaw] || null;
+    const serviceRaw = f['Service Type'] || '';
+    const serviceType = SERVICE_MAP[serviceRaw] || null;
+
+    orders.push({
+      id: orderId,
+      companah_id: f['Companah ID'] || null,
+      nfc_id: f['NFC ID'] || null,
+      pet_id: petId,
+      care_type: careType,
+      owner_contact_id: ownerContactId,
+      partner_organization_id: partnerOrgId,
+      attending_doctor: f['Attending Doctor'] || null,
+      status: status,
+      service_type: serviceType,
+      intake_location: f['Intake Location'] || null,
+      companah_location: f['Companah Location'] || null,
+      current_location: f['Location'] || null,
+      date_received: f['Date Received'] || null,
+      date_returned: f['Date Returned'] ? f['Date Returned'].split('T')[0] : null,
+      planned_return: f['Planned Return'] || null,
+      delivery_method: mapDelivery(f['Delivery']),
+      return_location: f['Return Location'] || null,
+      is_vet_referral: isVet || false,
+      notes: f['Notes'] || null,
+      intake_email: f['Intake Email'] || null,
+      referring_vet_info: f['Referring Vet Info'] || null,
+      special_case: f['Special Case'] || null,
+      is_stalled: f['Stalled?'] || false,
+      intake_pdf_url: f['Intake PDF URL'] || null,
+      care_plan_url: f['Care Plan URL'] || null,
+    });
+
+    // ── CARE PLAN ──
+    const hasCP = f['Care Plan Completed?'] || f['Vessel'] || f['Memorial Package'] ||
+                  f['Clay Prints'] || f['Nose Prints'] || f['Engraved Prints'];
+    if (hasCP) {
+      const cpId = ensureUUID(idMap.carePlans, rec.id);
+      carePlans.push({
+        id: cpId,
+        order_id: orderId,
+        care_type: careType,
+        is_completed: f['Care Plan Completed?'] || false,
+        owner_selections_locked: false,
+        vessel: f['Vessel'] || null,
+        memorial_package: f['Memorial Package'] || null,
+        clay_prints: f['Clay Prints'] || 0,
+        nose_prints: f['Nose Prints'] || 0,
+        engraved_prints: f['Engraved Prints'] || 0,
+        shadowbox_prints: f['Shadowbox Paw print'] || 0,
+        engraved_on_urn: f['CP - Engraved Print on Urn'] || false,
+        engraving_text: f['Text for Engraving'] || null,
+        memorial_plan_requested: f['Memorial Plan'] || false,
+        memorial_plan_sent: f['Send Memorial Plan'] || false,
+        clay_prints_completed: f['Clay Prints Completed'] || false,
+        memorial_items_list: f['Memorial Items (List)'] || null,
+        retained_items: f['Retained Items'] || null,
+      });
+    }
+  }
+
+  log(`  Inserting ${pets.length} pets...`);
+  const petResult = await sbUpsert('core', 'pets', pets);
+
+  log(`  Inserting ${orders.length} orders...`);
+  const orderResult = await sbUpsert('orders', 'orders', orders);
+
+  log(`  Inserting ${carePlans.length} care plans...`);
+  const cpResult = await sbUpsert('orders', 'care_plans', carePlans);
+
+  return {
+    name: 'Pets',
+    destinations: [
+      { table: 'core.pets', ...petResult },
+      { table: 'orders.orders', ...orderResult },
+      { table: 'orders.care_plans', ...cpResult },
+    ]
+  };
+}
+
+async function migrateRuns(records, machineName) {
+  const runs = [];
+  const runPets = [];
+
+  const machineId = idMap.machines[machineName];
+  if (!machineId) {
+    log(`  WARN: Machine "${machineName}" not found in Supabase. Run schema first.`, 'warn');
+    return { name: machineName, destinations: [] };
+  }
+
+  for (const rec of records) {
+    const f = rec.fields;
+    const runId = generateUUID();
+
+    runs.push({
+      id: runId,
+      machine_id: machineId,
+      process_number: f['Process #'] || null,
+      run_date: f['Run Date'] || null,
+      koh_weight_lbs: f['KOH lbs'] || f['KOH Weight (lbs)'] || null,
+      naoh_weight_lbs: f['NaOH lbs'] || f['NaOH Weight (lbs)'] || null,
+      slack_confirmation: f['Slack Confirmation'] ? f['Slack Confirmation'].toLowerCase().replace(/ /g, '_') : null,
+      slack_user: f['Slack User'] || null,
+    });
+
+    // Link pets to this run
+    const linkedPets = f['Pets'] || [];
+    for (const petAtId of linkedPets) {
+      const orderId = idMap.orders[petAtId];
+      if (orderId) {
+        runPets.push({
+          id: generateUUID(),
+          run_id: runId,
+          order_id: orderId,
+        });
+      }
+    }
+  }
+
+  log(`  Inserting ${runs.length} ${machineName} runs...`);
+  const runResult = await sbUpsert('operations', 'runs', runs);
+
+  log(`  Inserting ${runPets.length} run-pet links...`);
+  const rpResult = await sbUpsert('operations', 'run_pets', runPets);
+
+  return {
+    name: machineName,
+    destinations: [
+      { table: 'operations.runs', ...runResult },
+      { table: 'operations.run_pets', ...rpResult },
+    ]
+  };
+}
+
+async function migrateInvoices(records) {
+  const invoices = [];
+
+  for (const rec of records) {
+    const f = rec.fields;
+    const invId = ensureUUID(idMap.invoices, rec.id);
+
+    const qboInvoice = f['QBO Invoice'] || '';
+    if (!qboInvoice) continue;
+
+    // Link to order via Pet
+    let orderId = null;
+    const linkedPets = f['Pet'] || [];
+    if (linkedPets.length > 0) orderId = idMap.orders[linkedPets[0]] || null;
+
+    // Link to vet org
+    let billedToOrgId = null;
+    let billedToType = 'owner';
+    const linkedVets = f['Vet Client'] || [];
+    if (linkedVets.length > 0) {
+      billedToOrgId = idMap.orgs[linkedVets[0]] || null;
+      if (billedToOrgId) billedToType = 'partner';
+    }
+
+    // Terms
+    let terms = null;
+    const termsRaw = (f['Term'] || '').split(',')[0].trim();
+    terms = TERMS_MAP[termsRaw] || null;
+
+    // Status from balance
+    let status = 'sent';
+    const balance = f['Invoice Balance'];
+    if (balance !== undefined && balance !== null) {
+      status = parseFloat(balance) === 0 ? 'paid' : 'sent';
+    }
+
+    invoices.push({
+      id: invId,
+      order_id: orderId,
+      billed_to_type: billedToType,
+      billed_to_org_id: billedToOrgId,
+      qbo_invoice_id: qboInvoice,
+      qbo_customer_email: f['QBO Customer Email'] || null,
+      invoice_date: f['Invoice Created'] || null,
+      terms: terms,
+      balance_due: balance || null,
+      status: status,
+      memo: f['Notes'] || null,
+    });
+  }
+
+  log(`  Inserting ${invoices.length} invoices...`);
+  const result = await sbUpsert('billing', 'invoices', invoices);
+  return { name: 'QBO Invoices', destinations: [{ table: 'billing.invoices', ...result }] };
+}
+
+// ════════════════════════════════════════════════════════════
+// MAIN MIGRATION CONTROLLER
+// ════════════════════════════════════════════════════════════
+
+async function startMigration() {
+  goStep(3);
+  migrationStats = { tables: 0, records: 0, errors: 0, skipped: 0, details: [] };
+  document.getElementById('migLog').innerHTML = '';
+
+  const selected = MIGRATION_PHASES.filter((_, i) => document.getElementById(`mig-${i}`)?.checked);
+  const total = selected.length;
+  let completed = 0;
+
+  log('═══ Starting Companah Migration (v5 schema) ═══', 'info');
+  log(`${total} phases selected\n`, 'info');
+
+  for (const phase of selected) {
+    setProgress((completed / total) * 100, `Phase: ${phase.name}`);
+    log(`\n▸ ${phase.name}`, 'info');
+    log(`  Fetching "${phase.atTable}" from Airtable...`);
+
+    let records;
+    try {
+      records = await fetchAllRecords(phase.atTable);
+      log(`  Found ${records.length} records`);
+    } catch(e) {
+      log(`  ERROR: ${e.message}`, 'error');
+      migrationStats.errors++;
+      completed++;
+      continue;
+    }
+
+    let result;
+    try {
+      switch (phase.phase) {
+        case 'vets': result = await migrateVets(records); break;
+        case 'vetPartners': result = await migrateVetPartners(records); break;
+        case 'clients': result = await migrateClients(records); break;
+        case 'appUsers': result = await migrateAppUsers(records); break;
+        case 'pets': result = await migratePets(records); break;
+        case 'runs': result = await migrateRuns(records, phase.machine); break;
+        case 'invoices': result = await migrateInvoices(records); break;
+        default:
+          log(`  Unknown phase: ${phase.phase}`, 'warn');
+          result = { name: phase.name, destinations: [] };
+      }
+
+      for (const dest of result.destinations) {
+        if (dest.errors > 0) {
+          log(`  ⚠ ${dest.table}: ${dest.inserted} ok, ${dest.errors} errors`, 'warn');
+        } else {
+          log(`  ✓ ${dest.table}: ${dest.inserted} records`, 'success');
+        }
+        migrationStats.records += dest.inserted;
+        migrationStats.errors += dest.errors;
+        migrationStats.tables++;
+      }
+      migrationStats.details.push(result);
+    } catch(e) {
+      log(`  FATAL: ${e.message}`, 'error');
+      migrationStats.errors++;
+    }
+
+    completed++;
+  }
+
+  setProgress(100, 'Complete!');
+  log(`\n${'═'.repeat(60)}`, 'info');
+  const emoji = migrationStats.errors > 0 ? '⚠' : '✓';
+  log(`${emoji} Migration complete: ${migrationStats.tables} destinations, ${migrationStats.records.toLocaleString()} records, ${migrationStats.errors} errors`,
+      migrationStats.errors > 0 ? 'warn' : 'success');
+  log(`ID mappings created: ${Object.values(idMap).reduce((s, m) => s + Object.keys(m).length, 0)}`);
+
+  document.getElementById('migActions').classList.remove('hidden');
+
+  setTimeout(() => {
+    goStep(4);
+    document.getElementById('summaryGrid').innerHTML = `
+      <div class="summary-item"><div class="label">Supabase Tables</div><div class="value" style="color:var(--accent2)">${migrationStats.tables}</div></div>
+      <div class="summary-item"><div class="label">Records Inserted</div><div class="value" style="color:var(--green)">${migrationStats.records.toLocaleString()}</div></div>
+      <div class="summary-item"><div class="label">Errors</div><div class="value" style="color:${migrationStats.errors > 0 ? 'var(--red)' : 'var(--green)'}">${migrationStats.errors}</div></div>
+    `;
+
+    document.getElementById('summaryDetails').innerHTML = migrationStats.details.map(d => {
+      return `<div style="margin-bottom:12px;">
+        <strong>${d.name}</strong>
+        ${d.destinations.map(dest => `
+          <div class="detail-row">
+            <div class="lbl">${dest.table}</div>
+            <div style="color:${dest.errors > 0 ? 'var(--red)' : 'var(--green)'}">
+              ${dest.inserted} inserted${dest.errors > 0 ? `, ${dest.errors} errors` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+    }).join('');
+  }, 1500);
+}
+</script>
+</body>
+</html>

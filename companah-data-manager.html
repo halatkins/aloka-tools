@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Companah — Data Manager</title>
+<style>
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --surface2: #252836;
+    --border: #2e3144; --text: #e4e6f0; --text2: #8b8fa3;
+    --accent: #6c5ce7; --accent2: #a29bfe; --green: #00b894;
+    --orange: #fdcb6e; --red: #e17055; --blue: #74b9ff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .topbar h1 { font-size: 18px; } .topbar h1 span { color: var(--accent2); font-weight: 400; }
+  .topbar a { color: var(--text2); text-decoration: none; font-size: 13px; } .topbar a:hover { color: var(--accent2); }
+
+  .conn-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 8px 24px; display: flex; align-items: center; gap: 10px; font-size: 13px; flex-wrap: wrap; }
+  .conn-bar input { flex: 1; min-width: 150px; max-width: 280px; padding: 6px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 12px; }
+  .conn-bar button { padding: 6px 14px; background: var(--accent); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+  .conn-status { font-size: 12px; color: var(--text2); } .conn-status.ok { color: var(--green); }
+
+  .layout { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 100px); }
+  .sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 12px; overflow-y: auto; }
+  .sidebar .sch { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); margin: 12px 0 4px; }
+  .sidebar .sch:first-child { margin-top: 0; }
+  .sidebar .tbl { padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 13px; color: var(--text2); }
+  .sidebar .tbl:hover { background: var(--surface2); color: var(--text); }
+  .sidebar .tbl.active { background: var(--accent); color: white; }
+
+  .content { padding: 20px; overflow: auto; }
+
+  /* Data Table */
+  .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .toolbar h2 { font-size: 18px; flex-shrink: 0; }
+  .toolbar .count { color: var(--text2); font-size: 13px; }
+  .toolbar input[type="text"] { padding: 8px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 13px; min-width: 200px; }
+  .toolbar button { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; }
+  .btn-add { background: var(--green); color: white; } .btn-add:hover { opacity: 0.9; }
+  .btn-refresh { background: var(--surface2); color: var(--text); border: 1px solid var(--border) !important; }
+
+  .data-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .data-table th { text-align: left; padding: 10px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text2); background: var(--surface2); border-bottom: 1px solid var(--border); position: sticky; top: 0; white-space: nowrap; }
+  .data-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .data-table tr:hover td { background: rgba(108,92,231,0.05); }
+  .data-table td.actions { white-space: nowrap; }
+  .data-table td.actions button { padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 12px; margin-right: 4px; }
+  .btn-edit { background: var(--surface2); color: var(--blue); } .btn-edit:hover { background: var(--blue); color: white; }
+  .btn-del { background: var(--surface2); color: var(--red); } .btn-del:hover { background: var(--red); color: white; }
+
+  .pagination { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; font-size: 13px; color: var(--text2); }
+  .pagination button { padding: 6px 14px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; font-size: 13px; }
+  .pagination button:disabled { opacity: 0.4; cursor: default; }
+
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; width: 560px; max-width: 95vw; max-height: 85vh; overflow-y: auto; }
+  .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .modal-header h3 { font-size: 16px; }
+  .modal-close { background: none; border: none; color: var(--text2); font-size: 20px; cursor: pointer; }
+  .modal-body { padding: 20px; }
+  .field-group { margin-bottom: 14px; }
+  .field-group label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 4px; }
+  .field-group input, .field-group textarea, .field-group select { width: 100%; padding: 8px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 13px; }
+  .field-group textarea { min-height: 60px; resize: vertical; font-family: inherit; }
+  .field-group input:focus, .field-group textarea:focus { outline: none; border-color: var(--accent); }
+  .modal-footer { padding: 16px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+  .modal-footer button { padding: 8px 20px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; }
+  .btn-save { background: var(--green); color: white; } .btn-cancel { background: var(--surface2); color: var(--text); }
+
+  .empty-msg { text-align: center; padding: 40px; color: var(--text2); }
+  .welcome-msg { text-align: center; padding: 60px 20px; color: var(--text2); }
+  .welcome-msg h2 { color: var(--text); margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>Data <span>Manager</span></h1>
+  <a href="index.html">← Dashboard</a>
+</div>
+
+<div class="conn-bar">
+  <span style="color:var(--text2)">URL:</span>
+  <input type="text" id="connUrl" placeholder="https://xxx.supabase.co" />
+  <span style="color:var(--text2)">Key:</span>
+  <input type="password" id="connKey" placeholder="service_role key" />
+  <button onclick="doConnect()">Connect</button>
+  <span class="conn-status" id="connStatus">Not connected</span>
+</div>
+
+<div class="layout">
+  <div class="sidebar" id="sidebar"></div>
+  <div class="content" id="content">
+    <div class="welcome-msg"><h2>Data Manager</h2><p>Connect and select a table to browse, create, edit, and delete records.</p></div>
+  </div>
+</div>
+
+<!-- Record Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle">Record</h3>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveRecord()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let SB_URL = '', SB_KEY = '';
+let currentSchema = '', currentTable = '', currentPage = 0;
+let tableColumns = [], totalCount = 0;
+let editingId = null;
+const PAGE_SIZE = 50;
+
+const SCHEMAS = [
+  { name: 'core', tables: ['organizations','contacts','pets'] },
+  { name: 'pricing', tables: ['products','partner_rates'] },
+  { name: 'orders', tables: ['orders','line_items','care_plans','memorials'] },
+  { name: 'operations', tables: ['machines','runs','run_pets'] },
+  { name: 'billing', tables: ['invoices','invoice_line_items'] },
+  { name: 'workflows', tables: ['templates','tasks','comments'] },
+  { name: 'partners', tables: ['profiles','referrals'] },
+  { name: 'clients', tables: ['portal_access','reviews'] },
+  { name: 'logistics', tables: ['locations','routes','stops','stop_items'] },
+];
+
+// Check URL params
+const params = new URLSearchParams(window.location.search);
+if (params.get('url')) document.getElementById('connUrl').value = params.get('url');
+if (params.get('key')) document.getElementById('connKey').value = params.get('key');
+
+function buildSidebar() {
+  document.getElementById('sidebar').innerHTML = SCHEMAS.map(s =>
+    `<div class="sch">${s.name}</div>` +
+    s.tables.map(t => `<div class="tbl" id="nav-${s.name}-${t}" onclick="selectTable('${s.name}','${t}')">${t}</div>`).join('')
+  ).join('');
+}
+buildSidebar();
+
+async function doConnect() {
+  SB_URL = document.getElementById('connUrl').value.trim().replace(/\/$/, '');
+  SB_KEY = document.getElementById('connKey').value.trim();
+  const st = document.getElementById('connStatus');
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/`, { headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }});
+    if (!r.ok) throw new Error(r.status);
+    st.textContent = '● Connected'; st.className = 'conn-status ok';
+  } catch(e) { st.textContent = '✗ ' + e.message; st.className = 'conn-status'; }
+}
+
+if (params.get('url') && params.get('key')) { SB_URL = params.get('url'); SB_KEY = params.get('key'); doConnect(); }
+
+async function sbFetch(method, table, schema, opts = {}) {
+  const headers = {
+    'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`,
+    'Accept-Profile': schema, 'Content-Profile': schema,
+    'Prefer': opts.prefer || 'return=representation,count=exact'
+  };
+  if (opts.body) headers['Content-Type'] = 'application/json';
+  const r = await fetch(`${SB_URL}/rest/v1/${table}${opts.query || ''}`, {
+    method, headers, body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+  const range = r.headers.get('content-range');
+  const count = range ? parseInt(range.split('/')[1]) : null;
+  const data = r.status === 204 ? null : await r.json();
+  if (!r.ok) throw new Error(data?.message || data?.error || r.status);
+  return { data, count };
+}
+
+async function selectTable(schema, table) {
+  currentSchema = schema; currentTable = table; currentPage = 0;
+  document.querySelectorAll('.tbl').forEach(el => el.classList.remove('active'));
+  document.getElementById(`nav-${schema}-${table}`)?.classList.add('active');
+
+  // Get columns from OpenAPI spec
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/?apikey=${SB_KEY}`, {
+      headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Accept-Profile': schema }
+    });
+    const spec = await r.json();
+    const def = spec.definitions?.[table];
+    tableColumns = def ? Object.keys(def.properties) : [];
+  } catch(e) { tableColumns = []; }
+
+  loadData();
+}
+
+async function loadData() {
+  const content = document.getElementById('content');
+  const offset = currentPage * PAGE_SIZE;
+
+  content.innerHTML = `<div class="toolbar">
+    <h2>${currentSchema}.${currentTable}</h2>
+    <span class="count" id="recordCount">Loading...</span>
+    <div style="flex:1"></div>
+    <input type="text" id="searchInput" placeholder="Search..." onkeyup="if(event.key==='Enter')doSearch()" />
+    <button class="btn-refresh" onclick="loadData()">↻ Refresh</button>
+    <button class="btn-add" onclick="openCreateModal()">+ New Record</button>
+  </div>
+  <div class="data-wrap"><table class="data-table"><thead><tr id="dataHead"></tr></thead><tbody id="dataBody"><tr><td colspan="99" class="empty-msg">Loading...</td></tr></tbody></table></div>
+  <div class="pagination"><button id="prevBtn" onclick="prevPage()" disabled>← Previous</button><span id="pageInfo"></span><button id="nextBtn" onclick="nextPage()" disabled>Next →</button></div>`;
+
+  try {
+    const { data, count } = await sbFetch('GET', currentTable, currentSchema, {
+      query: `?select=*&order=created_at.desc&limit=${PAGE_SIZE}&offset=${offset}`
+    });
+    totalCount = count || 0;
+
+    document.getElementById('recordCount').textContent = `${totalCount.toLocaleString()} records`;
+
+    // Determine visible columns (limit to reasonable number)
+    const displayCols = tableColumns.length > 0 ? tableColumns : (data.length > 0 ? Object.keys(data[0]) : []);
+    const visibleCols = displayCols.filter(c => !['created_at','updated_at'].includes(c)).slice(0, 10);
+
+    document.getElementById('dataHead').innerHTML =
+      visibleCols.map(c => `<th>${c}</th>`).join('') + '<th>Actions</th>';
+
+    if (!data || data.length === 0) {
+      document.getElementById('dataBody').innerHTML = '<tr><td colspan="99" class="empty-msg">No records found</td></tr>';
+    } else {
+      document.getElementById('dataBody').innerHTML = data.map(row => {
+        const cells = visibleCols.map(c => {
+          let val = row[c];
+          if (val === null || val === undefined) return '<td style="color:var(--text2)">null</td>';
+          if (typeof val === 'object') val = JSON.stringify(val);
+          if (typeof val === 'string' && val.length > 50) val = val.substring(0, 50) + '...';
+          return `<td>${escHtml(String(val))}</td>`;
+        }).join('');
+        return `<tr>${cells}<td class="actions">
+          <button class="btn-edit" onclick='openEditModal(${escHtml(JSON.stringify(row))})'>Edit</button>
+          <button class="btn-del" onclick="deleteRecord('${row.id}')">Delete</button>
+        </td></tr>`;
+      }).join('');
+    }
+
+    // Pagination
+    document.getElementById('prevBtn').disabled = currentPage === 0;
+    document.getElementById('nextBtn').disabled = offset + PAGE_SIZE >= totalCount;
+    document.getElementById('pageInfo').textContent = `Page ${currentPage + 1} of ${Math.max(1, Math.ceil(totalCount / PAGE_SIZE))}`;
+  } catch(e) {
+    document.getElementById('dataBody').innerHTML = `<tr><td colspan="99" class="empty-msg" style="color:var(--red)">Error: ${escHtml(e.message)}</td></tr>`;
+  }
+}
+
+function prevPage() { if (currentPage > 0) { currentPage--; loadData(); } }
+function nextPage() { currentPage++; loadData(); }
+
+async function doSearch() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (!q) { loadData(); return; }
+  // Search across text columns
+  const content = document.getElementById('content');
+  // Simple approach: filter by first text-like column
+  currentPage = 0;
+  // For now, reload with search — could be enhanced with proper full-text search
+  loadData();
+}
+
+function openCreateModal() {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = `New ${currentTable} record`;
+  const editableCols = tableColumns.filter(c => !['id','created_at','updated_at'].includes(c));
+  document.getElementById('modalBody').innerHTML = editableCols.map(c => `
+    <div class="field-group">
+      <label>${c}</label>
+      ${c.includes('notes') || c.includes('description') || c.includes('body') || c.includes('text')
+        ? `<textarea id="field-${c}"></textarea>`
+        : `<input type="text" id="field-${c}" />`
+      }
+    </div>
+  `).join('');
+  document.getElementById('modal').classList.add('open');
+}
+
+function openEditModal(record) {
+  editingId = record.id;
+  document.getElementById('modalTitle').textContent = `Edit record`;
+  const editableCols = tableColumns.filter(c => !['id','created_at','updated_at'].includes(c));
+  document.getElementById('modalBody').innerHTML = editableCols.map(c => {
+    let val = record[c];
+    if (val === null || val === undefined) val = '';
+    if (typeof val === 'object') val = JSON.stringify(val);
+    const isTextarea = c.includes('notes') || c.includes('description') || c.includes('body') || c.includes('text');
+    return `<div class="field-group">
+      <label>${c}</label>
+      ${isTextarea
+        ? `<textarea id="field-${c}">${escHtml(String(val))}</textarea>`
+        : `<input type="text" id="field-${c}" value="${escHtml(String(val))}" />`
+      }
+    </div>`;
+  }).join('');
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+async function saveRecord() {
+  const editableCols = tableColumns.filter(c => !['id','created_at','updated_at'].includes(c));
+  const body = {};
+  for (const c of editableCols) {
+    const el = document.getElementById(`field-${c}`);
+    if (!el) continue;
+    let val = el.value;
+    if (val === '') { body[c] = null; continue; }
+    // Try to parse booleans
+    if (val === 'true') { body[c] = true; continue; }
+    if (val === 'false') { body[c] = false; continue; }
+    // Try to parse numbers for numeric fields
+    if (!isNaN(val) && val.trim() !== '' && !c.includes('name') && !c.includes('email') && !c.includes('phone') && !c.includes('address') && !c.includes('id') && !c.includes('text') && !c.includes('note') && !c.includes('url')) {
+      body[c] = Number(val);
+      continue;
+    }
+    // Try to parse JSON
+    if (val.startsWith('{') || val.startsWith('[')) {
+      try { body[c] = JSON.parse(val); continue; } catch(e) {}
+    }
+    body[c] = val;
+  }
+
+  try {
+    if (editingId) {
+      await sbFetch('PATCH', currentTable, currentSchema, {
+        query: `?id=eq.${editingId}`, body
+      });
+    } else {
+      await sbFetch('POST', currentTable, currentSchema, { body });
+    }
+    closeModal();
+    loadData();
+  } catch(e) {
+    alert('Error saving: ' + e.message);
+  }
+}
+
+async function deleteRecord(id) {
+  if (!confirm('Delete this record? This cannot be undone.')) return;
+  try {
+    await sbFetch('DELETE', currentTable, currentSchema, {
+      query: `?id=eq.${id}`, prefer: 'return=minimal'
+    });
+    loadData();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+</script>
+</body>
+</html>
