@@ -728,7 +728,59 @@ COMMENT ON TABLE logistics.stop_items IS 'What happened at each stop — which p
 
 
 -- ════════════════════════════════════════════════════════════
--- STEP 10: Seed data for operations machines
+-- STEP 10: v4 → v5 column migrations
+-- If tables already exist from v4, add the new v5 columns.
+-- ADD COLUMN IF NOT EXISTS is safe to re-run.
+-- ════════════════════════════════════════════════════════════
+
+-- core.pets: pocket pet flag
+ALTER TABLE core.pets ADD COLUMN IF NOT EXISTS is_pocket_pet boolean DEFAULT false;
+
+-- orders.orders: care model fields
+ALTER TABLE orders.orders ADD COLUMN IF NOT EXISTS care_type text CHECK (care_type IN ('direct', 'partner', 'shared')) DEFAULT 'partner';
+
+-- Rename v4 columns → v5 (safe: does nothing if already renamed or doesn't exist)
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='orders' AND table_name='orders' AND column_name='client_contact_id') THEN
+    ALTER TABLE orders.orders RENAME COLUMN client_contact_id TO owner_contact_id;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='orders' AND table_name='orders' AND column_name='vet_organization_id') THEN
+    ALTER TABLE orders.orders RENAME COLUMN vet_organization_id TO partner_organization_id;
+  END IF;
+END $$;
+
+-- orders.line_items: billing split + sku
+ALTER TABLE orders.line_items ADD COLUMN IF NOT EXISTS billed_to_type text CHECK (billed_to_type IN ('partner', 'owner'));
+ALTER TABLE orders.line_items ADD COLUMN IF NOT EXISTS billed_to_id uuid;
+ALTER TABLE orders.line_items ADD COLUMN IF NOT EXISTS sku text;
+
+-- orders.care_plans: care model fields
+ALTER TABLE orders.care_plans ADD COLUMN IF NOT EXISTS care_type text CHECK (care_type IN ('direct', 'partner', 'shared'));
+ALTER TABLE orders.care_plans ADD COLUMN IF NOT EXISTS owner_selections_locked boolean DEFAULT false;
+
+-- billing.invoices: split billing target
+ALTER TABLE billing.invoices ADD COLUMN IF NOT EXISTS billed_to_type text CHECK (billed_to_type IN ('partner', 'owner'));
+ALTER TABLE billing.invoices ADD COLUMN IF NOT EXISTS billed_to_contact_id uuid REFERENCES core.contacts(id) ON DELETE SET NULL;
+ALTER TABLE billing.invoices ADD COLUMN IF NOT EXISTS billed_to_org_id uuid REFERENCES core.organizations(id) ON DELETE SET NULL;
+
+-- billing.invoice_line_items: sku
+ALTER TABLE billing.invoice_line_items ADD COLUMN IF NOT EXISTS sku text;
+
+-- partners.profiles: partner code + surcharge
+ALTER TABLE partners.profiles ADD COLUMN IF NOT EXISTS partner_code text UNIQUE;
+ALTER TABLE partners.profiles ADD COLUMN IF NOT EXISTS overweight_surcharge numeric DEFAULT 25.00;
+
+-- Expand species CHECK on core.pets (drop old, add new — safe if already updated)
+DO $$ BEGIN
+  ALTER TABLE core.pets DROP CONSTRAINT IF EXISTS pets_species_check;
+  ALTER TABLE core.pets ADD CONSTRAINT pets_species_check
+    CHECK (species IN ('dog','cat','bird','reptile','rabbit','hamster','guinea_pig','other'));
+EXCEPTION WHEN others THEN NULL;
+END $$;
+
+
+-- ════════════════════════════════════════════════════════════
+-- STEP 11: Seed data for operations machines
 -- ════════════════════════════════════════════════════════════
 
 INSERT INTO operations.machines (name, machine_type, facility, is_active)
