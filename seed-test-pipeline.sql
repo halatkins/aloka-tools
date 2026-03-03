@@ -146,69 +146,83 @@ BEGIN
     task_order := 1;
 
     -- ── TRIAGE TASKS ──
-    INSERT INTO workflows.tasks (order_id, template_id, name, sort_order, is_completed)
+    INSERT INTO workflows.tasks (order_id, template_id, title, status, priority)
     VALUES
       (rec.order_id, 'a0000000-0000-0000-0000-000000000001',
-       'Verify pet identity & weight', 1,
-       rec.status NOT IN ('awaiting_pickup', 'received')),
+       'Verify pet identity & weight',
+       CASE WHEN rec.status NOT IN ('awaiting_pickup', 'received') THEN 'done' ELSE 'pending' END,
+       'high'),
 
       (rec.order_id, 'a0000000-0000-0000-0000-000000000001',
-       'Make clay paw impressions', 2,
-       rec.status NOT IN ('awaiting_pickup', 'received', 'triage')),
+       'Make clay paw impressions',
+       CASE WHEN rec.status NOT IN ('awaiting_pickup', 'received', 'triage') THEN 'done' ELSE 'pending' END,
+       'high'),
 
       (rec.order_id, 'a0000000-0000-0000-0000-000000000001',
-       'Photograph paw prints', 3,
-       rec.status NOT IN ('awaiting_pickup', 'received', 'triage')),
+       'Photograph paw prints',
+       CASE WHEN rec.status NOT IN ('awaiting_pickup', 'received', 'triage') THEN 'done' ELSE 'pending' END,
+       'normal'),
 
       (rec.order_id, 'a0000000-0000-0000-0000-000000000001',
-       'Collect lock of hair', 4,
-       rec.status NOT IN ('awaiting_pickup', 'received', 'triage')),
+       'Collect lock of hair',
+       CASE WHEN rec.status NOT IN ('awaiting_pickup', 'received', 'triage') THEN 'done' ELSE 'pending' END,
+       'normal'),
 
       (rec.order_id, 'a0000000-0000-0000-0000-000000000001',
-       'Scan NFC tag', 5,
-       rec.status NOT IN ('awaiting_pickup', 'received', 'triage'));
+       'Scan NFC tag',
+       CASE WHEN rec.status NOT IN ('awaiting_pickup', 'received', 'triage') THEN 'done' ELSE 'pending' END,
+       'normal');
 
     -- ── CRAFTING MEMORIALS ──
-    INSERT INTO workflows.tasks (order_id, template_id, name, sort_order, is_completed)
+    INSERT INTO workflows.tasks (order_id, template_id, title, status, priority)
     VALUES
       (rec.order_id, 'a0000000-0000-0000-0000-000000000002',
-       'Engrave urn with inscription', 1,
-       rec.status IN ('ready_to_return', 'customer_pickup')),
+       'Engrave urn with inscription',
+       CASE WHEN rec.status IN ('ready_to_return', 'customer_pickup') THEN 'done' ELSE 'pending' END,
+       'high'),
 
       (rec.order_id, 'a0000000-0000-0000-0000-000000000002',
-       'Fire clay paw prints', 2,
-       rec.status IN ('building_memorials', 'ready_to_return', 'customer_pickup')),
+       'Fire clay paw prints',
+       CASE WHEN rec.status IN ('building_memorials', 'ready_to_return', 'customer_pickup') THEN 'done' ELSE 'pending' END,
+       'high'),
 
       (rec.order_id, 'a0000000-0000-0000-0000-000000000002',
-       'Engrave wood paw prints', 3,
-       rec.status IN ('ready_to_return', 'customer_pickup')),
+       'Engrave wood paw prints',
+       CASE WHEN rec.status IN ('ready_to_return', 'customer_pickup') THEN 'done' ELSE 'pending' END,
+       'normal'),
 
       (rec.order_id, 'a0000000-0000-0000-0000-000000000002',
-       'Fill urn with remains', 4,
-       rec.status IN ('ready_to_return', 'customer_pickup')),
+       'Fill urn with remains',
+       CASE WHEN rec.status IN ('ready_to_return', 'customer_pickup') THEN 'done' ELSE 'pending' END,
+       'high'),
 
       (rec.order_id, 'a0000000-0000-0000-0000-000000000002',
-       'Assemble memorial package', 5,
-       rec.status IN ('ready_to_return', 'customer_pickup'));
+       'Assemble memorial package',
+       CASE WHEN rec.status IN ('ready_to_return', 'customer_pickup') THEN 'done' ELSE 'pending' END,
+       'normal');
 
     -- ── QUALITY CONTROL ──
-    INSERT INTO workflows.tasks (order_id, template_id, name, sort_order, is_completed)
+    INSERT INTO workflows.tasks (order_id, template_id, title, status, priority)
     VALUES
       (rec.order_id, 'a0000000-0000-0000-0000-000000000003',
-       'Verify urn engraving accuracy', 1,
-       rec.status IN ('ready_to_return', 'customer_pickup')),
+       'Verify urn engraving accuracy',
+       CASE WHEN rec.status IN ('ready_to_return', 'customer_pickup') THEN 'done' ELSE 'pending' END,
+       'high'),
 
       (rec.order_id, 'a0000000-0000-0000-0000-000000000003',
-       'Check clay prints — no cracks or defects', 2,
-       rec.status IN ('ready_to_return', 'customer_pickup')),
+       'Check clay prints — no cracks or defects',
+       CASE WHEN rec.status IN ('ready_to_return', 'customer_pickup') THEN 'done' ELSE 'pending' END,
+       'high'),
 
       (rec.order_id, 'a0000000-0000-0000-0000-000000000003',
-       'Confirm all memorial items present', 3,
-       rec.status IN ('ready_to_return', 'customer_pickup')),
+       'Confirm all memorial items present',
+       CASE WHEN rec.status IN ('ready_to_return', 'customer_pickup') THEN 'done' ELSE 'pending' END,
+       'normal'),
 
       (rec.order_id, 'a0000000-0000-0000-0000-000000000003',
-       'Package for return — secure and labeled', 4,
-       rec.status = 'customer_pickup');
+       'Package for return — secure and labeled',
+       CASE WHEN rec.status = 'customer_pickup' THEN 'done' ELSE 'pending' END,
+       'normal');
 
   END LOOP;
 END $$;
