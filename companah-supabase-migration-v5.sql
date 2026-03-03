@@ -100,6 +100,7 @@ CREATE TABLE IF NOT EXISTS core.organizations (
   region        text,
   notes         text,
   logo_url      text,
+  vet_id        text,        -- external vet practice identifier
   created_at    timestamptz NOT NULL DEFAULT now(),
   updated_at    timestamptz NOT NULL DEFAULT now()
 );
@@ -154,6 +155,7 @@ CREATE TABLE IF NOT EXISTS core.pets (
   gender              text CHECK (gender IN ('male', 'female')),
   weight_lbs          numeric,
   is_pocket_pet       boolean DEFAULT false,
+  owner_last_name     text,
   date_of_passing     date,
   special_instructions text,
   images              jsonb DEFAULT '[]'::jsonb,
@@ -223,6 +225,10 @@ CREATE TABLE IF NOT EXISTS orders.orders (
                             )),
   pickup_location           text,
   return_location           text,
+
+  -- Legacy / external references
+  legacy_trello_id          text,
+  record_created            timestamptz,  -- original Airtable record creation time
 
   -- Flags & notes
   is_vet_referral           boolean DEFAULT false,
@@ -316,6 +322,33 @@ CREATE TRIGGER care_plans_updated_at
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
 COMMENT ON TABLE orders.care_plans IS 'Care plan details — vessel, prints, engraving. owner_selections_locked freezes the plan for shared care billing';
+
+-- ── orders.comments ───────────────────────────────────────
+CREATE TABLE IF NOT EXISTS orders.comments (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id        uuid NOT NULL REFERENCES orders.orders(id) ON DELETE CASCADE,
+
+  -- Polymorphic target: null = general order comment, or pinned to a specific entity
+  target_type     text CHECK (target_type IN ('task', 'pet', 'line_item', 'care_plan')),
+  target_id       uuid,
+
+  -- Content
+  author_id       uuid REFERENCES core.contacts(id) ON DELETE SET NULL,
+  body            text NOT NULL,
+
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  updated_at      timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_order_comments_order ON orders.comments(order_id);
+CREATE INDEX IF NOT EXISTS idx_order_comments_target ON orders.comments(target_type, target_id);
+
+DROP TRIGGER IF EXISTS order_comments_updated_at ON orders.comments;
+CREATE TRIGGER order_comments_updated_at
+  BEFORE UPDATE ON orders.comments
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+COMMENT ON TABLE orders.comments IS 'Comments on orders — general (target null) or pinned to a task, pet, line item, or care plan';
 
 -- ── orders.memorials ────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS orders.memorials (
@@ -493,6 +526,7 @@ CREATE TABLE IF NOT EXISTS workflows.tasks (
   status        text CHECK (status IN ('pending', 'in_progress', 'blocked', 'done')) DEFAULT 'pending',
   priority      text CHECK (priority IN ('low', 'normal', 'high', 'urgent')) DEFAULT 'normal',
   assigned_to   uuid REFERENCES core.contacts(id) ON DELETE SET NULL,
+  completed_by  uuid REFERENCES core.contacts(id) ON DELETE SET NULL,
   due_date      date,
   completed_at  timestamptz,
   created_at    timestamptz NOT NULL DEFAULT now(),
@@ -771,6 +805,13 @@ ALTER TABLE billing.invoice_line_items ADD COLUMN IF NOT EXISTS sku text;
 -- partners.profiles: partner code + surcharge
 ALTER TABLE partners.profiles ADD COLUMN IF NOT EXISTS partner_code text UNIQUE;
 ALTER TABLE partners.profiles ADD COLUMN IF NOT EXISTS overweight_surcharge numeric DEFAULT 25.00;
+
+-- v6 additions: new fields from field review
+ALTER TABLE core.pets ADD COLUMN IF NOT EXISTS owner_last_name text;
+ALTER TABLE core.organizations ADD COLUMN IF NOT EXISTS vet_id text;
+ALTER TABLE orders.orders ADD COLUMN IF NOT EXISTS legacy_trello_id text;
+ALTER TABLE orders.orders ADD COLUMN IF NOT EXISTS record_created timestamptz;
+ALTER TABLE workflows.tasks ADD COLUMN IF NOT EXISTS completed_by uuid REFERENCES core.contacts(id) ON DELETE SET NULL;
 
 -- Expand species CHECK on core.pets (drop old, add new — safe if already updated)
 DO $$ BEGIN

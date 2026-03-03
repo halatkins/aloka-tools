@@ -551,11 +551,17 @@ async function migrateVets(records) {
     const name = f['Practice'] || f['Practice Name'] || '';
     if (!name) continue;
 
+    // Extract logo URL from Airtable attachment
+    const logoAttachments = f['Logo'] || [];
+    const logoUrl = (Array.isArray(logoAttachments) && logoAttachments.length > 0)
+      ? logoAttachments[0].url : null;
+
     orgs.push({
       id: orgId,
       name: name,
       type: 'vet_partner',
       abbreviation: f['Vet ID'] || null,
+      vet_id: f['Vet ID'] || null,
       phone: f['Phone'] || null,
       email: f['Email'] || null,
       address_line_1: f['Address'] || null,
@@ -564,6 +570,7 @@ async function migrateVets(records) {
       zip: f['Zip'] || null,
       region: REGION_MAP[f['Region']] || f['Region'] || null,
       notes: f['General notes'] || null,
+      logo_url: logoUrl,
     });
 
     profiles.push({
@@ -798,6 +805,7 @@ async function migratePets(records) {
       id: petId,
       owner_id: ownerContactId,
       name: petName,
+      owner_last_name: f['Owner Last Name'] || null,
       species: species,
       breed: f['Breed'] || null,
       color: f['Color'] || null,
@@ -843,6 +851,8 @@ async function migratePets(records) {
       is_stalled: f['Stalled?'] || false,
       intake_pdf_url: f['Intake PDF URL'] || null,
       care_plan_url: f['Care Plan URL'] || null,
+      legacy_trello_id: f['Trello ID'] || null,
+      record_created: rec.createdTime || null,
     });
 
     // ── CARE PLAN ──
@@ -913,6 +923,7 @@ async function migrateRuns(records, machineName) {
       run_date: f['Run Date'] || null,
       koh_weight_lbs: f['KOH lbs'] || f['KOH Weight (lbs)'] || null,
       naoh_weight_lbs: f['NaOH lbs'] || f['NaOH Weight (lbs)'] || null,
+      bulk_weight_lbs: f['Bulk Weight'] || null,
       slack_confirmation: f['Slack Confirmation'] ? f['Slack Confirmation'].toLowerCase().replace(/ /g, '_') : null,
       slack_user: f['Slack User'] || null,
     });
